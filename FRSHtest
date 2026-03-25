@@ -1,0 +1,1105 @@
+<!doctype html>
+<html lang="en" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Apparel Store</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="https://js.stripe.com/v3/"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: 'Outfit', sans-serif; }
+    .page { display: none; }
+    .page.active { display: block; }
+    .nav-link { position: relative; cursor: pointer; transition: color 0.2s; }
+    .nav-link::after { content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 2px; transition: width 0.3s; }
+    .nav-link:hover::after, .nav-link.active::after { width: 100%; }
+    .product-card { transition: transform 0.3s, box-shadow 0.3s; }
+    .product-card:hover { transform: translateY(-6px); }
+    .garment-svg { transition: all 0.3s; }
+    .toast-container { position: fixed; top: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast { padding: 14px 20px; border-radius: 12px; color: #fff; font-weight: 500; animation: slideIn 0.4s ease, fadeOut 0.4s ease 2.6s; opacity: 0; animation-fill-mode: forwards; }
+    @keyframes slideIn { from { transform: translateX(100px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes fadeOut { from { opacity: 1; } to { opacity: 0; } }
+    .mockup-canvas { position: relative; overflow: hidden; border-radius: 12px; }
+    .deal-badge { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+    .hero-gradient { background: linear-gradient(135deg, #FF6B6B 0%, #FFE66D 25%, #4ECDC4 50%, #45B7D1 75%, #96E6A1 100%); background-size: 300% 300%; animation: gradientMove 8s ease infinite; }
+    @keyframes gradientMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+    .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9998; display: flex; align-items: center; justify-content: center; }
+    .stagger-in { opacity: 0; transform: translateY(20px); animation: staggerReveal 0.6s ease forwards; }
+    @keyframes staggerReveal { to { opacity: 1; transform: translateY(0); } }
+    input[type="range"] { -webkit-appearance: none; height: 6px; border-radius: 3px; outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; cursor: pointer; }
+  </style>
+  <style>body { box-sizing: border-box; }</style>
+ </head>
+ <body class="h-full">
+  <div id="app" class="h-full w-full overflow-auto" style="background: #FAFAFA;">
+   <!-- Toast Container -->
+   <div id="toast-container" class="toast-container"></div><!-- Confirm Overlay -->
+   <div id="confirm-overlay" class="confirm-overlay" style="display:none;"></div><!-- Navigation -->
+   <nav id="main-nav" style="background: #fff; border-bottom: 2px solid #FF6B6B;" class="sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+     <div class="flex items-center justify-between h-16">
+      <div id="nav-brand" class="font-bold text-xl tracking-tight" style="color: #FF6B6B; font-family: 'Space Mono', monospace;">
+       FRSH CO.
+      </div>
+      <div class="flex items-center gap-2"><button id="menu-btn" class="flex items-center justify-center w-10 h-10 rounded-lg hover:bg-gray-100 transition" onclick="toggleMenu()"><i data-lucide="menu" style="color:#333; width:24px; height:24px;"></i></button>
+      </div>
+     </div>
+     <div id="nav-menu" class="absolute top-16 right-0 w-full max-w-xs bg-white rounded-b-2xl shadow-lg p-4" style="display:none; border-top: 1px solid #eee;">
+      <div class="flex flex-col gap-2">
+       <span class="nav-link block px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition" data-page="home" onclick="navigateTo('home');closeMenu()" style="color: #333; background: #f7f7f7;">HOME</span> <span class="nav-link block px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition" data-page="deals" onclick="navigateTo('deals');closeMenu()" style="color: #333; background: #f7f7f7;">DEALS</span> <span class="nav-link block px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition" data-page="catalog" onclick="navigateTo('catalog');closeMenu()" style="color: #333; background: #f7f7f7;">CATALOG</span> <span class="nav-link block px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition" data-page="about" onclick="navigateTo('about');closeMenu()" style="color: #333; background: #f7f7f7;">ABOUT</span> <span class="nav-link block px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition relative" data-page="cart" onclick="navigateTo('cart');closeMenu()" style="color: #333; background: #f7f7f7;"> CART <span id="cart-badge" class="inline-block ml-2 text-white text-xs px-2 py-1 rounded-full" style="background:#FF6B6B; display:none;">0</span> </span> <span class="nav-link flex items-center gap-2 px-4 py-3 rounded-lg text-sm font-medium cursor-pointer transition" data-page="manage" onclick="navigateTo('manage');closeMenu()" style="color: #333; background: #f7f7f7;"><i data-lucide="lock" style="width:16px; height:16px;"></i></span>
+      </div>
+     </div>
+    </div>
+   </nav><!-- PAGE: HOME (Landing with Hero) -->
+   <div id="page-home" class="page active">
+    <!-- Full-height Hero Section -->
+    <section class="hero-gradient relative overflow-hidden w-full" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+     <div class="max-w-7xl mx-auto px-6 relative z-10 flex flex-col items-center text-center w-full">
+      <h1 id="hero-heading" class="text-6xl md:text-8xl font-extrabold text-white stagger-in" style="text-shadow: 3px 6px 16px rgba(0,0,0,0.2); letter-spacing: -0.02em;">FRESH DROPS</h1>
+      <p id="hero-subtext" class="mt-6 text-2xl md:text-3xl text-white/90 max-w-2xl stagger-in font-light" style="animation-delay: 0.15s;">Custom apparel made just for you. Design it, wear it, own it.</p>
+      <div id="deals-banner" class="deal-badge mt-10 px-8 py-4 rounded-full font-bold text-lg text-white shadow-lg stagger-in" style="background: linear-gradient(90deg, #FF6B6B, #FFE66D); color: #333; animation-delay: 0.25s;">
+       🔥 LIMITED TIME: 30% OFF all custom tees — Use code FRESH30 🔥
+      </div>
+      <div class="flex flex-col sm:flex-row gap-4 mt-12 stagger-in" style="animation-delay: 0.35s;"><button onclick="navigateTo('catalog')" class="px-10 py-4 rounded-full font-bold text-lg transition-all hover:scale-105 active:scale-95" style="background:#fff; color:#FF6B6B;">Shop Now →</button> <button onclick="navigateTo('deals')" class="px-10 py-4 rounded-full font-bold text-lg transition-all hover:scale-105 active:scale-95 border-2 border-white" style="color:#fff; background:transparent;">View All Deals</button>
+      </div>
+     </div><!-- Decorative shapes -->
+     <svg class="absolute top-0 left-0 w-full h-full opacity-10" preserveaspectratio="none"><circle cx="15%" cy="30%" r="150" fill="white" /><circle cx="85%" cy="70%" r="100" fill="white" /><rect x="60%" y="10%" width="80" height="80" rx="16" fill="white" transform="rotate(30 65 40)" />
+     </svg>
+    </section>
+   </div><!-- PAGE: DEALS -->
+   <div id="page-deals" class="page">
+    <div class="max-w-7xl mx-auto px-6 py-16">
+     <h2 class="text-4xl font-bold mb-4" style="color:#333;">Current Promotions</h2>
+     <p class="text-gray-500 mb-10 text-lg">Shop our exclusive deals and limited-time offers on premium apparel.</p>
+     <div id="deals-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8"></div>
+    </div>
+   </div><!-- PAGE: CATALOG -->
+   <div id="page-catalog" class="page">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+     <h2 class="text-3xl font-bold mb-2" style="color:#333;">Full Catalog</h2>
+     <p class="text-gray-500 mb-8">Browse all products. Click any item to customize and create a mockup.</p>
+     <div class="flex flex-wrap gap-3 mb-8">
+      <button onclick="filterCatalog('all')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition-all" style="background:#FF6B6B; color:#fff;">All</button> <button onclick="filterCatalog('tee')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition-all" style="background:#f0f0f0; color:#333;">Tees</button> <button onclick="filterCatalog('hoodie')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition-all" style="background:#f0f0f0; color:#333;">Hoodies</button> <button onclick="filterCatalog('tank')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition-all" style="background:#f0f0f0; color:#333;">Tanks</button> <button onclick="filterCatalog('longsleeve')" class="filter-btn px-4 py-2 rounded-full text-sm font-medium transition-all" style="background:#f0f0f0; color:#333;">Long Sleeves</button>
+     </div>
+     <div id="catalog-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"></div>
+    </div>
+   </div><!-- PAGE: PRODUCT DETAIL / MOCKUP DESIGNER -->
+   <div id="page-product" class="page">
+    <div class="max-w-7xl mx-auto px-6 py-12">
+     <button onclick="navigateTo(lastCatalogPage)" class="flex items-center gap-2 text-sm font-medium mb-6 hover:opacity-70 transition" style="color:#FF6B6B;"><i data-lucide="arrow-left" style="width:16px;height:16px;"></i> Back</button>
+     <div class="grid grid-cols-1 lg:grid-cols-2 gap-12">
+      <!-- Mockup Preview -->
+      <div>
+       <div id="mockup-canvas" class="mockup-canvas w-full flex items-center justify-center" style="background: #f0f0f0; min-height: 400px;">
+        <div id="mockup-garment" class="relative"></div>
+       </div>
+       <p class="text-xs text-gray-400 mt-2 text-center">Drag your design text on the garment to reposition</p>
+      </div><!-- Product Info & Controls -->
+      <div>
+       <h2 id="product-title" class="text-3xl font-bold" style="color:#333;"></h2>
+       <p id="product-price" class="text-2xl font-bold mt-2" style="color:#FF6B6B;"></p>
+       <p id="product-desc" class="text-gray-500 mt-3 leading-relaxed"></p>
+       <div class="mt-6 space-y-5">
+        <!-- Garment Selector -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Garment Type</label>
+         <div id="garment-options" class="flex flex-wrap gap-2"></div>
+        </div><!-- Color -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Garment Color</label>
+         <div id="color-options" class="flex gap-2"></div>
+        </div><!-- Size -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Size</label>
+         <div id="size-options" class="flex flex-wrap gap-2"></div>
+        </div><!-- Design Text -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Custom Design Text</label> <input type="text" id="mockup-text-input" placeholder="Enter your text..." class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd; focus:ring-color:#4ECDC4;" oninput="updateMockupText(this.value)">
+        </div><!-- Text Color -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Text Color</label>
+         <div class="flex gap-2">
+          <button onclick="setTextColor('#FFFFFF')" class="w-8 h-8 rounded-full border-2" style="background:#fff; border-color:#ddd;"></button> <button onclick="setTextColor('#000000')" class="w-8 h-8 rounded-full border-2" style="background:#000; border-color:#333;"></button> <button onclick="setTextColor('#FF6B6B')" class="w-8 h-8 rounded-full border-2" style="background:#FF6B6B; border-color:#FF6B6B;"></button> <button onclick="setTextColor('#FFE66D')" class="w-8 h-8 rounded-full border-2" style="background:#FFE66D; border-color:#FFE66D;"></button> <button onclick="setTextColor('#4ECDC4')" class="w-8 h-8 rounded-full border-2" style="background:#4ECDC4; border-color:#4ECDC4;"></button>
+         </div>
+        </div><!-- Scale -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Design Size</label> <input type="range" id="mockup-scale" min="0.5" max="3" step="0.1" value="1.5" class="w-full" style="accent-color:#4ECDC4;" oninput="updateMockupScale(this.value)">
+        </div><!-- Quantity -->
+        <div>
+         <label class="text-sm font-semibold text-gray-700 block mb-2">Quantity</label>
+         <div class="flex items-center gap-3">
+          <button onclick="changeQty(-1)" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-lg" style="background:#f0f0f0; color:#333;">−</button> <span id="qty-display" class="text-lg font-semibold" style="color:#333;">1</span> <button onclick="changeQty(1)" class="w-9 h-9 rounded-full flex items-center justify-center font-bold text-lg" style="background:#f0f0f0; color:#333;">+</button>
+         </div>
+        </div><!-- Add to Cart --> <button id="add-to-cart-btn" onclick="addToCart()" class="w-full py-3 rounded-xl font-bold text-lg text-white transition-all hover:scale-[1.02] active:scale-95" style="background: linear-gradient(90deg, #FF6B6B, #4ECDC4);"> Add to Cart </button>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div><!-- PAGE: ABOUT -->
+   <div id="page-about" class="page active">
+    <div class="max-w-4xl mx-auto px-6 py-16">
+     <h2 id="about-heading" class="text-4xl font-bold mb-6 stagger-in" style="color:#333;">About Us</h2>
+     <div class="rounded-2xl p-8 stagger-in" style="background:#fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); animation-delay:0.1s;">
+      <p id="about-paragraph" class="text-gray-600 leading-relaxed text-lg">We're a custom apparel brand built on creativity, quality, and self-expression. Every piece is designed with care and printed to order so you always get something fresh. From bold graphic tees to cozy hoodies, we make it easy to wear what you love. Our mission is simple: help you stand out and feel amazing in what you wear.</p>
+     </div>
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-10">
+      <div class="rounded-2xl p-6 text-center stagger-in" style="background:#fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); animation-delay:0.2s;">
+       <div class="w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-3" style="background:#FFE66D;"><i data-lucide="zap" style="color:#333; width:24px; height:24px;"></i>
+       </div>
+       <h3 class="font-bold text-lg" style="color:#333;">Fast Production</h3>
+       <p class="text-gray-500 text-sm mt-1">Orders printed and shipped within 48 hours</p>
+      </div>
+      <div class="rounded-2xl p-6 text-center stagger-in" style="background:#fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); animation-delay:0.3s;">
+       <div class="w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-3" style="background:#4ECDC4;"><i data-lucide="heart" style="color:#fff; width:24px; height:24px;"></i>
+       </div>
+       <h3 class="font-bold text-lg" style="color:#333;">Made With Love</h3>
+       <p class="text-gray-500 text-sm mt-1">Every design is crafted with passion</p>
+      </div>
+      <div class="rounded-2xl p-6 text-center stagger-in" style="background:#fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); animation-delay:0.4s;">
+       <div class="w-14 h-14 mx-auto rounded-full flex items-center justify-center mb-3" style="background:#FF6B6B;"><i data-lucide="truck" style="color:#fff; width:24px; height:24px;"></i>
+       </div>
+       <h3 class="font-bold text-lg" style="color:#333;">Free Shipping</h3>
+       <p class="text-gray-500 text-sm mt-1">On all regular delivery orders</p>
+      </div>
+     </div>
+    </div>
+   </div><!-- PAGE: MANAGE PRODUCTS -->
+   <div id="page-manage" class="page"><!-- Login Screen -->
+    <div id="manage-login" class="flex items-center justify-center" style="min-height:100vh; background:#FAFAFA;">
+     <div class="rounded-2xl p-8 max-w-md w-full mx-4" style="background:#fff; box-shadow: 0 8px 32px rgba(0,0,0,0.08);">
+      <h2 class="text-2xl font-bold mb-2 text-center" style="color:#333;">Manage Access</h2>
+      <p class="text-gray-500 text-center text-sm mb-6">Enter your password to access the manage section</p><input type="password" id="manage-password" placeholder="Enter password..." class="w-full border rounded-lg px-4 py-3 mb-4 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd; focus:ring-color:#4ECDC4;" onkeypress="if(event.key==='Enter')verifyManagePassword()"> <button onclick="verifyManagePassword()" class="w-full py-3 rounded-lg font-bold text-white transition-all hover:scale-[1.02] active:scale-95" style="background:#4ECDC4;">Access Manage</button> <button onclick="navigateTo('home')" class="w-full mt-2 py-2 rounded-lg font-medium transition-all" style="background:#f0f0f0; color:#333;">Go Back</button>
+     </div>
+    </div><!-- Manage Dashboard (hidden until password verified) -->
+    <div id="manage-dashboard" style="display:none;">
+     <div class="max-w-6xl mx-auto px-6 py-12">
+      <div class="flex items-center justify-between mb-8">
+       <div>
+        <h2 class="text-3xl font-bold mb-2" style="color:#333;">Manage Products &amp; Designs</h2>
+        <p class="text-gray-500">Add products, create custom designs, and manage your catalog.</p>
+       </div><button onclick="logoutManage()" class="px-4 py-2 rounded-lg text-sm font-medium transition-all" style="background:#f0f0f0; color:#333;">Logout</button>
+      </div><!-- Tab Navigation -->
+      <div class="flex gap-2 mb-8 border-b" style="border-color:#eee;"><button onclick="switchManageTab('products')" class="manage-tab px-4 py-3 font-medium border-b-2 transition-all" data-tab="products" style="border-color:#4ECDC4; color:#4ECDC4;">Products</button> <button onclick="switchManageTab('settings')" class="manage-tab px-4 py-3 font-medium border-b-2 transition-all" data-tab="settings" style="border-color:transparent; color:#999;">Settings</button>
+      </div><!-- Products Tab -->
+      <div id="tab-products" class="manage-tab-content">
+       <div class="rounded-2xl p-6 mb-8" style="background:#f0fffe; border: 2px solid #4ECDC4;">
+        <h3 class="font-bold text-lg mb-4" style="color:#333;">Add New Product</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4"><input type="text" id="new-product-code" placeholder="Product Code (e.g. TEEBLUE01)" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;"> <input type="text" id="new-product-name" placeholder="Product Name" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;"> <input type="text" id="new-product-desc" placeholder="Description" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;"> <select id="new-product-category" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;"> <option value="">Select Category...</option> <option value="tee">T-Shirt</option> <option value="hoodie">Hoodie</option> <option value="tank">Tank Top</option> <option value="longsleeve">Long Sleeve</option> </select> <input type="number" id="new-product-price" placeholder="Price (e.g. 24.99)" step="0.01" min="0" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;"> <input type="number" id="new-product-sale-price" placeholder="Sale Price (optional)" step="0.01" min="0" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;"> <input type="text" id="new-product-emoji" placeholder="Emoji (e.g. 🌅)" maxlength="2" class="border rounded-lg px-4 py-2 text-sm focus:outline-none" style="border-color:#ddd;">
+        </div><button onclick="addNewProduct()" class="px-6 py-2 rounded-lg font-bold text-white" style="background:#4ECDC4;">Add Product</button>
+       </div>
+       <h3 class="font-bold text-lg mb-4" style="color:#333;">Your Products</h3>
+       <div id="manage-products-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+      </div><!-- Designs Tab -->
+      <div id="tab-settings" class="manage-tab-content" style="display:none;">
+       <div class="rounded-2xl p-6" style="background:#f0fffe; border: 2px solid #4ECDC4;">
+        <h3 class="font-bold text-lg mb-6" style="color:#333;">Store Settings</h3>
+        <div class="space-y-4">
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">Store Name</label> <input type="text" id="setting-store-name" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="Your Store Name" oninput="updateSetting('store_name', this.value)">
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">Tagline</label> <input type="text" id="setting-tagline" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="Your tagline" oninput="updateSetting('tagline', this.value)">
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">Hero Heading</label> <input type="text" id="setting-hero-heading" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="Main heading text" oninput="updateSetting('hero_heading', this.value)">
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">Hero Subtext</label> <input type="text" id="setting-hero-subtext" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="Subtext under heading" oninput="updateSetting('hero_subtext', this.value)">
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">Deals Banner</label> <input type="text" id="setting-deals-banner-text" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="Current deal announcement" oninput="updateSetting('deals_banner_text', this.value)">
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">About Heading</label> <input type="text" id="setting-about-heading" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="About Us" oninput="updateSetting('about_heading', this.value)">
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">About Text</label> <textarea id="setting-about-paragraph" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd; min-height:100px;" placeholder="Tell your story..." oninput="updateSetting('about_paragraph', this.value)"></textarea>
+         </div>
+         <div>
+          <label class="text-sm font-semibold text-gray-700 block mb-2">Footer Text</label> <input type="text" id="setting-footer-text" class="w-full border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" placeholder="© 2025 Your Brand" oninput="updateSetting('footer_text', this.value)">
+         </div>
+        </div>
+       </div>
+      </div>
+     </div>
+    </div>
+   </div>
+  </div>
+  <div id="page-cart" class="page">
+   <div class="max-w-4xl mx-auto px-6 py-12">
+    <h2 class="text-3xl font-bold mb-8" style="color:#333;">Your Cart</h2>
+    <div id="cart-empty" class="text-center py-16" style="display:none;">
+     <div class="w-20 h-20 mx-auto rounded-full flex items-center justify-center mb-4" style="background:#f0f0f0;"><i data-lucide="shopping-cart" style="color:#ccc; width:32px; height:32px;"></i>
+     </div>
+     <p class="text-gray-400 text-lg">Your cart is empty</p><button onclick="navigateTo('catalog')" class="mt-4 px-6 py-2 rounded-full font-medium text-white" style="background:#4ECDC4;">Browse Catalog</button>
+    </div>
+    <div id="cart-items" class="space-y-4"></div>
+    <div id="cart-summary" class="mt-8 rounded-2xl p-6" style="background:#fff; box-shadow: 0 4px 24px rgba(0,0,0,0.06); display:none;">
+     <!-- Promo Code Input -->
+     <div class="mb-6 pb-6" style="border-bottom: 1px solid #eee;">
+      <label class="text-sm font-semibold text-gray-700 block mb-2">Promo Code</label>
+      <div class="flex gap-2">
+       <input type="text" id="promo-code-input" placeholder="Enter promo code..." class="flex-1 border rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2" style="border-color:#ddd;" oninput="this.value = this.value.toUpperCase()"> <button onclick="applyPromoCode()" class="px-4 py-2 rounded-lg font-medium transition-all" style="background:#4ECDC4; color:#fff;">Apply</button>
+      </div>
+      <div id="promo-message" style="display:none; margin-top:8px; padding:8px 12px; border-radius:8px; font-size:12px;"></div>
+     </div>
+     <div class="flex justify-between items-center mb-4">
+      <span class="text-gray-500">Subtotal</span> <span id="cart-subtotal" class="font-bold text-lg" style="color:#333;">$0.00</span>
+     </div>
+     <div id="promo-discount-row" style="display:none;">
+      <div class="flex justify-between items-center mb-4">
+       <span class="text-gray-500">Promo Discount</span> <span id="promo-discount-display" class="font-bold text-lg" style="color:#4ECDC4;">-$0.00</span>
+      </div>
+     </div><!-- Shipping -->
+     <div class="mb-4">
+      <label class="text-sm font-semibold text-gray-700 block mb-2">Shipping Method</label>
+      <div class="flex flex-col gap-2">
+       <label class="flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition" style="border-color:#4ECDC4; background:#f0fffe;"> <input type="radio" name="shipping" value="regular" checked onchange="updateShipping()" class="accent-[#4ECDC4]">
+        <div>
+         <span class="font-medium text-sm" style="color:#333;">Regular Delivery</span> <span class="text-xs text-gray-400 block">5-7 business days · Free</span>
+        </div><span class="ml-auto font-bold text-sm" style="color:#4ECDC4;">FREE</span> </label> <label class="flex items-center gap-3 p-3 rounded-lg cursor-pointer border-2 transition" style="border-color:#eee;"> <input type="radio" name="shipping" value="superfast" onchange="updateShipping()" class="accent-[#FF6B6B]">
+        <div>
+         <span class="font-medium text-sm" style="color:#333;">⚡ Super-Fast</span> <span class="text-xs text-gray-400 block">1-2 business days</span>
+        </div><span class="ml-auto font-bold text-sm" style="color:#FF6B6B;">$12.99</span> </label>
+      </div>
+     </div>
+     <div class="flex justify-between items-center mb-4">
+      <span class="text-gray-500">Shipping</span> <span id="cart-shipping" class="font-medium" style="color:#4ECDC4;">Free</span>
+     </div>
+     <div class="border-t pt-4 flex justify-between items-center" style="border-color:#eee;">
+      <span class="font-bold text-lg" style="color:#333;">Total</span> <span id="cart-total" class="font-extrabold text-2xl" style="color:#FF6B6B;">$0.00</span>
+     </div><!-- Payment Form -->
+     <div id="payment-form-container" style="display:none; margin-top:24px; padding-top:24px; border-top: 1px solid #eee;">
+      <h3 class="font-bold text-lg mb-4" style="color:#333;">Payment Details</h3>
+      <form id="payment-form" onsubmit="handlePayment(event)">
+       <div id="card-element" class="mb-4"></div>
+       <div id="card-errors" style="color:#FF6B6B; font-size:14px; margin-bottom:12px;"></div><button id="submit-payment" type="submit" class="w-full py-3 rounded-xl font-bold text-lg text-white transition-all hover:scale-[1.02] active:scale-95" style="background: linear-gradient(90deg, #FF6B6B, #FFE66D); color:#333;"> Complete Payment </button> <button type="button" onclick="cancelPayment()" class="w-full mt-2 py-2 rounded-lg font-medium transition-all" style="background:#f0f0f0; color:#333;"> Cancel </button>
+      </form>
+     </div><button id="place-order-btn" onclick="initiatePayment()" class="w-full mt-6 py-3 rounded-xl font-bold text-lg text-white transition-all hover:scale-[1.02] active:scale-95" style="background: linear-gradient(90deg, #FF6B6B, #FFE66D); color:#333;"> Place Order </button>
+    </div>
+   </div>
+  </div><!-- Footer -->
+  <footer class="mt-auto py-8 text-center" style="background:#333;">
+   <p id="footer-text" class="text-gray-400 text-sm">© 2025 Apparel Co. All rights reserved.</p>
+  </footer>
+  <script>
+// ============ DATA ============
+const PRODUCTS = [
+  { id: 'p1', name: 'Sunset Vibes Tee', desc: 'A warm gradient design for chill days.', price: 24.99, salePrice: 17.49, category: 'tee', onSale: true, emoji: '🌅' },
+  { id: 'p2', name: 'Midnight Hoodie', desc: 'Stay cozy in this premium heavyweight hoodie.', price: 49.99, salePrice: 39.99, category: 'hoodie', onSale: true, emoji: '🌙' },
+  { id: 'p3', name: 'Electric Tank', desc: 'Lightweight and bold for summer workouts.', price: 19.99, salePrice: null, category: 'tank', onSale: false, emoji: '⚡' },
+  { id: 'p4', name: 'Cloud Nine Long Sleeve', desc: 'Ultra-soft cotton blend for everyday wear.', price: 34.99, salePrice: 27.99, category: 'longsleeve', onSale: true, emoji: '☁️' },
+  { id: 'p5', name: 'Neon Wave Tee', desc: 'Pop art inspired with vivid neon accents.', price: 26.99, salePrice: null, category: 'tee', onSale: false, emoji: '🌊' },
+  { id: 'p6', name: 'Cactus Club Hoodie', desc: 'Desert vibes in a plush hoodie.', price: 52.99, salePrice: null, category: 'hoodie', onSale: false, emoji: '🌵' },
+  { id: 'p7', name: 'Blaze Tank', desc: 'Fire design on a breathable fit.', price: 18.99, salePrice: 14.99, category: 'tank', onSale: true, emoji: '🔥' },
+  { id: 'p8', name: 'Arctic Fox Long Sleeve', desc: 'Cool design for cold weather lovers.', price: 36.99, salePrice: null, category: 'longsleeve', onSale: false, emoji: '🦊' },
+];
+
+const GARMENT_COLORS = [
+  { name: 'White', hex: '#FFFFFF' },
+  { name: 'Black', hex: '#1a1a1a' },
+  { name: 'Coral', hex: '#FF6B6B' },
+  { name: 'Mint', hex: '#4ECDC4' },
+  { name: 'Lemon', hex: '#FFE66D' },
+  { name: 'Sky', hex: '#45B7D1' },
+];
+
+const SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL'];
+const GARMENT_TYPES = [
+  { id: 'tee', label: 'T-Shirt' },
+  { id: 'hoodie', label: 'Hoodie' },
+  { id: 'tank', label: 'Tank Top' },
+  { id: 'longsleeve', label: 'Long Sleeve' },
+];
+
+const PROMO_CODES = {
+  'FRESH30': { type: 'percent', value: 30, description: '30% off all items' },
+  'WELCOME10': { type: 'percent', value: 10, description: '10% off your first order' },
+  'SAVE5': { type: 'fixed', value: 5, description: '$5 off orders over $25' },
+  'SUMMER20': { type: 'percent', value: 20, description: '20% off summer collection' },
+  'FRSH15': { type: 'percent', value: 15, description: '15% off everything' },
+};
+
+let currentPage = 'home';
+let lastCatalogPage = 'catalog';
+let currentProduct = null;
+let mockupState = { garment: 'tee', color: '#FFFFFF', size: 'M', text: '', textColor: '#000000', scale: 1.5, qty: 1 };
+let cartItems = []; // from data SDK
+let shippingMethod = 'regular';
+let appliedPromoCode = null;
+let promoDiscount = 0;
+let customProducts = []; // user-added products
+let stripe = null;
+let elements = null;
+let cardElement = null;
+let manageIsAuthenticated = false;
+const MANAGE_PASSWORD = 'admin123'; // Change this to your desired password
+
+// ============ GARMENT SVG GENERATORS ============
+function garmentSVG(type, color, textStr, textColor, scale) {
+  const w = 260, h = 300;
+  const textY = type === 'hoodie' ? 175 : 160;
+  const fontSize = Math.round(18 * scale);
+  const escapedText = (textStr || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  let shape = '';
+  switch(type) {
+    case 'tee':
+      shape = `<path d="M65 60 L30 90 L50 110 L75 90 L75 250 L185 250 L185 90 L210 110 L230 90 L195 60 L170 75 Q130 95 90 75 Z" fill="${color}" stroke="#ccc" stroke-width="1.5"/>`;
+      break;
+    case 'hoodie':
+      shape = `<path d="M60 65 L25 100 L50 120 L70 100 L65 250 L195 250 L190 100 L210 120 L235 100 L200 65 L180 80 Q130 105 80 80 Z" fill="${color}" stroke="#ccc" stroke-width="1.5"/><path d="M105 60 Q130 30 155 60" fill="none" stroke="#ccc" stroke-width="2"/><ellipse cx="130" cy="62" rx="22" ry="10" fill="${color}" stroke="#ccc" stroke-width="1"/>`;
+      break;
+    case 'tank':
+      shape = `<path d="M90 65 L85 70 L80 250 L180 250 L175 70 L170 65 L155 80 Q130 95 105 80 Z" fill="${color}" stroke="#ccc" stroke-width="1.5"/>`;
+      break;
+    case 'longsleeve':
+      shape = `<path d="M65 60 L15 160 L40 170 L75 95 L75 250 L185 250 L185 95 L220 170 L245 160 L195 60 L170 75 Q130 95 90 75 Z" fill="${color}" stroke="#ccc" stroke-width="1.5"/>`;
+      break;
+  }
+  return `<svg viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+    ${shape}
+    <text x="130" y="${textY}" text-anchor="middle" font-family="'Space Mono', monospace" font-size="${fontSize}" font-weight="700" fill="${textColor}" style="pointer-events:none;">${escapedText}</text>
+  </svg>`;
+}
+
+function garmentThumb(type, color, size) {
+  const s = size || 60;
+  let shape = '';
+  switch(type) {
+    case 'tee': shape = `<path d="M15 14 L7 21 L12 25 L17 21 L17 50 L43 50 L43 21 L48 25 L53 21 L45 14 L40 17 Q30 23 20 17 Z" fill="${color}" stroke="#ccc" stroke-width="1"/>`; break;
+    case 'hoodie': shape = `<path d="M14 15 L5 23 L12 27 L16 23 L15 50 L45 50 L44 23 L48 27 L55 23 L46 15 L42 18 Q30 25 18 18 Z" fill="${color}" stroke="#ccc" stroke-width="1"/><ellipse cx="30" cy="15" rx="6" ry="3" fill="${color}" stroke="#ccc" stroke-width="0.7"/>`; break;
+    case 'tank': shape = `<path d="M20 15 L19 16 L18 50 L42 50 L41 16 L40 15 L36 18 Q30 23 24 18 Z" fill="${color}" stroke="#ccc" stroke-width="1"/>`; break;
+    case 'longsleeve': shape = `<path d="M15 14 L3 36 L9 38 L17 22 L17 50 L43 50 L43 22 L51 38 L57 36 L45 14 L40 17 Q30 23 20 17 Z" fill="${color}" stroke="#ccc" stroke-width="1"/>`; break;
+  }
+  return `<svg viewBox="0 0 60 55" width="${s}" height="${s*55/60}" xmlns="http://www.w3.org/2000/svg">${shape}</svg>`;
+}
+
+// ============ NAVIGATION ============
+function toggleMenu() {
+  const menu = document.getElementById('nav-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+
+function closeMenu() {
+  document.getElementById('nav-menu').style.display = 'none';
+}
+
+function navigateTo(page) {
+  if (page === 'manage') {
+    unlockManage();
+    return;
+  }
+ 
+  closeMenu();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll(`.nav-link[data-page="${page}"]`).forEach(l => l.classList.add('active'));
+  currentPage = page;
+  window.scrollTo(0, 0);
+  if (page === 'cart') renderCart();
+}
+
+function verifyManagePassword() {
+  const input = document.getElementById('manage-password');
+  const password = input.value;
+ 
+  if (password === MANAGE_PASSWORD) {
+    manageIsAuthenticated = true;
+    document.getElementById('manage-login').style.display = 'none';
+    document.getElementById('manage-dashboard').style.display = 'block';
+    showToast('✓ Welcome to Manage!', '#4ECDC4');
+  } else {
+    showToast('✗ Incorrect password', '#FF6B6B');
+    input.value = '';
+  }
+}
+
+function logoutManage() {
+  manageIsAuthenticated = false;
+  navigateTo('home');
+  showToast('Logged out from Manage', '#4ECDC4');
+}
+
+function switchManageTab(tab) {
+  // Hide all tabs
+  document.querySelectorAll('.manage-tab-content').forEach(t => t.style.display = 'none');
+  document.querySelectorAll('.manage-tab').forEach(b => { b.style.borderColor = 'transparent'; b.style.color = '#999'; });
+ 
+  // Show selected tab
+  document.getElementById('tab-' + tab).style.display = 'block';
+  document.querySelector(`.manage-tab[data-tab="${tab}"]`).style.borderColor = '#4ECDC4';
+  document.querySelector(`.manage-tab[data-tab="${tab}"]`).style.color = '#4ECDC4';
+ 
+  if (tab === 'settings') {
+    loadSettingsForm();
+  }
+}
+
+function updateSetting(key, value) {
+  window.elementSdk.setConfig({ [key]: value });
+}
+
+function loadSettingsForm() {
+  const config = window.elementSdk.config || defaultConfig;
+  document.getElementById('setting-store-name').value = config.store_name || '';
+  document.getElementById('setting-tagline').value = config.tagline || '';
+  document.getElementById('setting-hero-heading').value = config.hero_heading || '';
+  document.getElementById('setting-hero-subtext').value = config.hero_subtext || '';
+  document.getElementById('setting-deals-banner-text').value = config.deals_banner_text || '';
+  document.getElementById('setting-about-heading').value = config.about_heading || '';
+  document.getElementById('setting-about-paragraph').value = config.about_paragraph || '';
+  document.getElementById('setting-footer-text').value = config.footer_text || '';
+}
+
+function unlockManage() {
+  closeMenu();
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-manage').classList.add('active');
+  document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+  document.querySelectorAll(`.nav-link[data-page="manage"]`).forEach(l => l.classList.add('active'));
+  document.getElementById('manage-login').style.display = 'flex';
+  document.getElementById('manage-dashboard').style.display = 'none';
+  document.getElementById('manage-password').value = '';
+  document.getElementById('manage-password').focus();
+  currentPage = 'manage';
+  window.scrollTo(0, 0);
+}
+function createProductCard(product, showSale) {
+  const price = product.onSale && product.salePrice ? product.salePrice : product.price;
+  const card = document.createElement('div');
+  card.className = 'product-card rounded-2xl overflow-hidden cursor-pointer';
+  card.style.cssText = 'background:#fff; box-shadow: 0 4px 20px rgba(0,0,0,0.06);';
+  card.onclick = () => openProduct(product);
+  card.innerHTML = `
+    <div class="flex items-center justify-center py-8" style="background:#f7f7f7; position:relative;">
+      ${product.onSale && showSale ? '<span class="absolute top-3 left-3 px-3 py-1 rounded-full text-xs font-bold text-white" style="background:#FF6B6B;">SALE</span>' : ''}
+      <div class="text-6xl">${product.emoji}</div>
+    </div>
+    <div class="p-5">
+      <h3 class="font-bold text-base" style="color:#333;">${product.name}</h3>
+      <p class="text-gray-400 text-sm mt-1 truncate">${product.desc}</p>
+      <div class="flex items-center gap-2 mt-3">
+        <span class="font-bold text-lg" style="color:#FF6B6B;">$${price.toFixed(2)}</span>
+        ${product.onSale && product.salePrice ? `<span class="line-through text-gray-400 text-sm">$${product.price.toFixed(2)}</span>` : ''}
+      </div>
+    </div>`;
+  return card;
+}
+
+function renderDeals() {
+  const grid = document.getElementById('deals-grid');
+  grid.innerHTML = '';
+  const allProducts = [...PRODUCTS, ...customProducts];
+  allProducts.filter(p => p.onSale).forEach(p => grid.appendChild(createProductCard(p, true)));
+}
+
+function renderCatalog(filter) {
+  const grid = document.getElementById('catalog-grid');
+  grid.innerHTML = '';
+  const allProducts = [...PRODUCTS, ...customProducts];
+  const items = filter && filter !== 'all' ? allProducts.filter(p => p.category === filter) : allProducts;
+  items.forEach(p => grid.appendChild(createProductCard(p, false)));
+}
+
+function filterCatalog(cat) {
+  document.querySelectorAll('.filter-btn').forEach(b => { b.style.background = '#f0f0f0'; b.style.color = '#333'; });
+  event.target.style.background = '#FF6B6B'; event.target.style.color = '#fff';
+  renderCatalog(cat);
+}
+
+// ============ PRODUCT MANAGEMENT ============
+function renderManageProducts() {
+  const grid = document.getElementById('manage-products-grid');
+  grid.innerHTML = '';
+  customProducts.forEach(product => {
+    const card = document.createElement('div');
+    card.className = 'rounded-xl p-4';
+    card.style.cssText = 'background:#fff; box-shadow: 0 2px 12px rgba(0,0,0,0.05);';
+    const salePrice = product.salePrice ? ` (on sale: $${product.salePrice.toFixed(2)})` : '';
+    card.innerHTML = `
+      <div class="flex items-start justify-between mb-2">
+        <div>
+          <p class="font-bold text-sm" style="color:#333;">${product.name}</p>
+          <p class="text-xs text-gray-400">${product.id}</p>
+        </div>
+        <span class="text-2xl">${product.emoji}</span>
+      </div>
+      <p class="text-xs text-gray-500 mb-2">${product.desc}</p>
+      <p class="text-xs font-semibold mb-3" style="color:#FF6B6B;">$${product.price.toFixed(2)}${salePrice}</p>
+      <button onclick="deleteProduct('${product.id}')" class="w-full py-2 rounded-lg text-xs font-medium transition-all" style="background:#fff0f0; color:#FF6B6B;">Delete</button>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+function addNewProduct() {
+  const code = document.getElementById('new-product-code').value.trim();
+  const name = document.getElementById('new-product-name').value.trim();
+  const desc = document.getElementById('new-product-desc').value.trim();
+  const category = document.getElementById('new-product-category').value;
+  const priceVal = document.getElementById('new-product-price').value;
+  const salePriceVal = document.getElementById('new-product-sale-price').value;
+  const emoji = document.getElementById('new-product-emoji').value.trim();
+
+  if (!code || !name || !desc || !category || !priceVal || !emoji) {
+    showToast('Please fill in all required fields', '#FF6B6B');
+    return;
+  }
+
+  const price = parseFloat(priceVal);
+  const salePrice = salePriceVal ? parseFloat(salePriceVal) : null;
+
+  if (isNaN(price) || price <= 0 || (salePrice && isNaN(salePrice))) {
+    showToast('Invalid price values', '#FF6B6B');
+    return;
+  }
+
+  const newProduct = {
+    id: 'custom_' + Date.now(),
+    name: name,
+    desc: desc,
+    price: price,
+    salePrice: salePrice,
+    category: category,
+    onSale: salePrice ? true : false,
+    emoji: emoji,
+    isCustom: true
+  };
+
+  customProducts.push(newProduct);
+ 
+  // Clear form
+  document.getElementById('new-product-code').value = '';
+  document.getElementById('new-product-name').value = '';
+  document.getElementById('new-product-desc').value = '';
+  document.getElementById('new-product-category').value = '';
+  document.getElementById('new-product-price').value = '';
+  document.getElementById('new-product-sale-price').value = '';
+  document.getElementById('new-product-emoji').value = '';
+
+  renderManageProducts();
+  renderCatalog('all');
+  showToast(`Product "${name}" added! It's now in your catalog.`, '#4ECDC4');
+}
+
+function deleteProduct(productId) {
+  customProducts = customProducts.filter(p => p.id !== productId);
+  renderManageProducts();
+  renderCatalog('all');
+  renderDeals();
+  showToast('Product deleted', '#FF6B6B');
+}
+
+// ============ PRODUCT DETAIL / MOCKUP ============
+function openProduct(product) {
+  currentProduct = product;
+  lastCatalogPage = currentPage === 'deals' ? 'deals' : 'catalog';
+  mockupState = { garment: product.category, color: '#FFFFFF', size: 'M', text: '', textColor: '#000000', scale: 1.5, qty: 1 };
+
+  document.getElementById('product-title').textContent = product.name;
+  document.getElementById('product-price').textContent = '$' + (product.onSale && product.salePrice ? product.salePrice : product.price).toFixed(2);
+  document.getElementById('product-desc').textContent = product.desc;
+  document.getElementById('mockup-text-input').value = '';
+  document.getElementById('mockup-scale').value = 1.5;
+  document.getElementById('qty-display').textContent = '1';
+
+  // Garment options
+  const gOpts = document.getElementById('garment-options');
+  gOpts.innerHTML = '';
+  GARMENT_TYPES.forEach(g => {
+    const btn = document.createElement('button');
+    btn.className = 'px-4 py-2 rounded-full text-sm font-medium transition-all';
+    btn.style.cssText = g.id === product.category ? 'background:#4ECDC4; color:#fff;' : 'background:#f0f0f0; color:#333;';
+    btn.textContent = g.label;
+    btn.onclick = () => { mockupState.garment = g.id; renderGarmentOptions(); renderMockup(); };
+    gOpts.appendChild(btn);
+  });
+
+  // Color options
+  const cOpts = document.getElementById('color-options');
+  cOpts.innerHTML = '';
+  GARMENT_COLORS.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className = 'w-9 h-9 rounded-full border-2 transition-all';
+    btn.style.cssText = `background:${c.hex}; border-color:${c.hex === mockupState.color ? '#333' : '#ddd'};`;
+    btn.title = c.name;
+    btn.onclick = () => { mockupState.color = c.hex; renderColorOptions(); renderMockup(); };
+    cOpts.appendChild(btn);
+  });
+
+  // Size options
+  const sOpts = document.getElementById('size-options');
+  sOpts.innerHTML = '';
+  SIZES.forEach(s => {
+    const btn = document.createElement('button');
+    btn.className = 'px-4 py-2 rounded-lg text-sm font-medium transition-all';
+    btn.style.cssText = s === mockupState.size ? 'background:#333; color:#fff;' : 'background:#f0f0f0; color:#333;';
+    btn.textContent = s;
+    btn.onclick = () => { mockupState.size = s; renderSizeOptions(); };
+    sOpts.appendChild(btn);
+  });
+
+  renderMockup();
+  navigateTo('product');
+  lucide.createIcons();
+}
+
+function renderGarmentOptions() {
+  const btns = document.getElementById('garment-options').children;
+  GARMENT_TYPES.forEach((g, i) => {
+    btns[i].style.cssText = g.id === mockupState.garment ? 'background:#4ECDC4; color:#fff;' : 'background:#f0f0f0; color:#333;';
+  });
+}
+function renderColorOptions() {
+  const btns = document.getElementById('color-options').children;
+  GARMENT_COLORS.forEach((c, i) => {
+    btns[i].style.borderColor = c.hex === mockupState.color ? '#333' : '#ddd';
+  });
+}
+function renderSizeOptions() {
+  const btns = document.getElementById('size-options').children;
+  SIZES.forEach((s, i) => {
+    btns[i].style.cssText = s === mockupState.size ? 'background:#333; color:#fff;' : 'background:#f0f0f0; color:#333;';
+  });
+}
+
+function renderMockup() {
+  document.getElementById('mockup-garment').innerHTML = garmentSVG(mockupState.garment, mockupState.color, mockupState.text, mockupState.textColor, mockupState.scale);
+}
+
+function updateMockupText(val) { mockupState.text = val; renderMockup(); }
+function setTextColor(c) { mockupState.textColor = c; renderMockup(); }
+function updateMockupScale(val) { mockupState.scale = parseFloat(val); renderMockup(); }
+function changeQty(d) { mockupState.qty = Math.max(1, mockupState.qty + d); document.getElementById('qty-display').textContent = mockupState.qty; }
+
+// ============ CART ============
+async function addToCart() {
+  if (!currentProduct) return;
+  if (cartItems.length >= 999) { showToast('Cart limit reached (999 items)', '#FF6B6B'); return; }
+  const btn = document.getElementById('add-to-cart-btn');
+  btn.textContent = 'Adding...'; btn.disabled = true;
+
+  const price = currentProduct.onSale && currentProduct.salePrice ? currentProduct.salePrice : currentProduct.price;
+  const result = await window.dataSdk.create({
+    product_id: currentProduct.id,
+    product_name: currentProduct.name,
+    garment: mockupState.garment,
+    size: mockupState.size,
+    color: mockupState.color,
+    quantity: mockupState.qty,
+    price: price,
+    shipping: 'regular',
+    mockup_text: mockupState.text,
+    mockup_text_color: mockupState.textColor,
+    mockup_design_x: 0,
+    mockup_design_y: 0,
+    mockup_design_scale: mockupState.scale,
+    status: 'cart'
+  });
+
+  btn.textContent = 'Add to Cart'; btn.disabled = false;
+  if (result.isOk) {
+    showToast('Added to cart!', '#4ECDC4');
+  } else {
+    showToast('Failed to add — try again', '#FF6B6B');
+  }
+}
+
+function renderCart() {
+  const itemsDiv = document.getElementById('cart-items');
+  const emptyDiv = document.getElementById('cart-empty');
+  const summaryDiv = document.getElementById('cart-summary');
+  const activeItems = cartItems.filter(i => i.status === 'cart');
+
+  if (activeItems.length === 0) {
+    emptyDiv.style.display = 'block'; summaryDiv.style.display = 'none'; itemsDiv.innerHTML = '';
+    return;
+  }
+  emptyDiv.style.display = 'none'; summaryDiv.style.display = 'block';
+
+  const existingEls = new Map([...itemsDiv.children].map(el => [el.dataset.id, el]));
+  const newIds = new Set(activeItems.map(i => i.__backendId));
+
+  activeItems.forEach(item => {
+    const gt = GARMENT_TYPES.find(g => g.id === item.garment);
+    if (existingEls.has(item.__backendId)) {
+      const el = existingEls.get(item.__backendId);
+      el.querySelector('.cart-item-name').textContent = item.product_name;
+      el.querySelector('.cart-item-details').textContent = `${gt ? gt.label : item.garment} · ${item.size} · Qty: ${item.quantity}`;
+      el.querySelector('.cart-item-price').textContent = `$${(item.price * item.quantity).toFixed(2)}`;
+      el.querySelector('.cart-item-thumb').innerHTML = garmentThumb(item.garment, item.color, 50);
+      el.querySelector('.cart-item-mockup').textContent = item.mockup_text ? `"${item.mockup_text}"` : '';
+      existingEls.delete(item.__backendId);
+    } else {
+      const el = document.createElement('div');
+      el.dataset.id = item.__backendId;
+      el.className = 'flex items-center gap-4 p-4 rounded-xl';
+      el.style.cssText = 'background:#fff; box-shadow: 0 2px 12px rgba(0,0,0,0.05);';
+      el.innerHTML = `
+        <div class="cart-item-thumb flex-shrink-0">${garmentThumb(item.garment, item.color, 50)}</div>
+        <div class="flex-1 min-w-0">
+          <p class="cart-item-name font-bold text-sm" style="color:#333;">${item.product_name}</p>
+          <p class="cart-item-details text-xs text-gray-400">${gt ? gt.label : item.garment} · ${item.size} · Qty: ${item.quantity}</p>
+          <p class="cart-item-mockup text-xs mt-1" style="color:#4ECDC4;">${item.mockup_text ? `"${item.mockup_text}"` : ''}</p>
+        </div>
+        <div class="text-right flex-shrink-0">
+          <p class="cart-item-price font-bold" style="color:#FF6B6B;">$${(item.price * item.quantity).toFixed(2)}</p>
+          <button onclick="removeCartItem('${item.__backendId}')" class="text-xs text-gray-400 hover:text-red-500 mt-1">Remove</button>
+        </div>`;
+      itemsDiv.appendChild(el);
+    }
+  });
+
+  existingEls.forEach(el => el.remove());
+  updateCartTotals(activeItems);
+}
+
+async function removeCartItem(backendId) {
+  const item = cartItems.find(i => i.__backendId === backendId);
+  if (!item) return;
+  const result = await window.dataSdk.delete(item);
+  if (!result.isOk) showToast('Failed to remove item', '#FF6B6B');
+}
+
+function updateCartTotals(items) {
+  const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
+  const shipCost = shippingMethod === 'superfast' ? 12.99 : 0;
+ 
+  // Calculate discount
+  let discount = 0;
+  if (appliedPromoCode && PROMO_CODES[appliedPromoCode]) {
+    const promo = PROMO_CODES[appliedPromoCode];
+    if (promo.type === 'percent') {
+      discount = (subtotal * promo.value) / 100;
+    } else if (promo.type === 'fixed') {
+      discount = Math.min(promo.value, subtotal);
+    }
+  }
+  promoDiscount = discount;
+ 
+  const discountedSubtotal = subtotal - discount;
+  const total = discountedSubtotal + shipCost;
+ 
+  document.getElementById('cart-subtotal').textContent = '$' + subtotal.toFixed(2);
+  document.getElementById('cart-shipping').textContent = shipCost > 0 ? '$12.99' : 'Free';
+  document.getElementById('cart-shipping').style.color = shipCost > 0 ? '#FF6B6B' : '#4ECDC4';
+  document.getElementById('cart-total').textContent = '$' + total.toFixed(2);
+ 
+  // Show/hide promo discount row
+  const promoRow = document.getElementById('promo-discount-row');
+  if (discount > 0) {
+    promoRow.style.display = 'block';
+    document.getElementById('promo-discount-display').textContent = '-$' + discount.toFixed(2);
+  } else {
+    promoRow.style.display = 'none';
+  }
+}
+
+function updateShipping() {
+  const radios = document.querySelectorAll('input[name="shipping"]');
+  radios.forEach(r => {
+    const label = r.closest('label');
+    if (r.checked) {
+      shippingMethod = r.value;
+      label.style.borderColor = r.value === 'superfast' ? '#FF6B6B' : '#4ECDC4';
+      label.style.background = r.value === 'superfast' ? '#fff5f5' : '#f0fffe';
+    } else {
+      label.style.borderColor = '#eee'; label.style.background = '#fff';
+    }
+  });
+  const activeItems = cartItems.filter(i => i.status === 'cart');
+  updateCartTotals(activeItems);
+}
+
+function applyPromoCode() {
+  const input = document.getElementById('promo-code-input');
+  const code = input.value.toUpperCase().trim();
+  const messageDiv = document.getElementById('promo-message');
+ 
+  if (!code) {
+    messageDiv.style.display = 'none';
+    return;
+  }
+ 
+  if (PROMO_CODES[code]) {
+    appliedPromoCode = code;
+    const promo = PROMO_CODES[code];
+    messageDiv.textContent = `✓ ${promo.description}`;
+    messageDiv.style.background = '#d4edda';
+    messageDiv.style.color = '#155724';
+    messageDiv.style.display = 'block';
+    const activeItems = cartItems.filter(i => i.status === 'cart');
+    updateCartTotals(activeItems);
+    showToast(`Promo code "${code}" applied!`, '#4ECDC4');
+  } else {
+    messageDiv.textContent = '✗ Invalid promo code';
+    messageDiv.style.background = '#f8d7da';
+    messageDiv.style.color = '#721c24';
+    messageDiv.style.display = 'block';
+    showToast('Promo code not found', '#FF6B6B');
+  }
+}
+
+function initiatePayment() {
+  const activeItems = cartItems.filter(i => i.status === 'cart');
+  if (activeItems.length === 0) return;
+ 
+  // Mount card element when showing form
+  if (cardElement && !cardElement._isMounted) {
+    cardElement.mount('#card-element');
+    cardElement.on('change', (event) => {
+      const displayError = document.getElementById('card-errors');
+      if (event.error) {
+        displayError.textContent = event.error.message;
+      } else {
+        displayError.textContent = '';
+      }
+    });
+  }
+ 
+  document.getElementById('place-order-btn').style.display = 'none';
+  document.getElementById('payment-form-container').style.display = 'block';
+  window.scrollTo(0, document.getElementById('payment-form-container').offsetTop - 100);
+}
+
+function cancelPayment() {
+  document.getElementById('payment-form-container').style.display = 'none';
+  document.getElementById('place-order-btn').style.display = 'block';
+  document.getElementById('card-errors').textContent = '';
+  if (cardElement) cardElement.clear();
+}
+
+async function handlePayment(event) {
+  event.preventDefault();
+
+  const btn = document.getElementById('submit-payment');
+  btn.disabled = true;
+  btn.textContent = 'Processing...';
+
+  const activeItems = cartItems.filter(i => i.status === 'cart');
+  const subtotal = activeItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const shipCost = shippingMethod === 'superfast' ? 12.99 : 0;
+  const discount = promoDiscount;
+  const total = Math.round((subtotal - discount + shipCost) * 100); // in cents
+
+  try {
+    // Create payment method with Stripe
+    const { paymentMethod, error } = await stripe.createPaymentMethod({
+      type: 'card',
+      card: cardElement,
+    });
+
+    if (error) {
+      document.getElementById('card-errors').textContent = error.message;
+      btn.disabled = false;
+      btn.textContent = 'Complete Payment';
+      return;
+    }
+
+    // In production, send paymentMethod.id to your backend to create charge
+    // For now, we'll simulate successful payment
+    await new Promise(r => setTimeout(r, 1500));
+   
+    showToast('💳 Payment processed with Stripe!', '#4ECDC4');
+   
+    // Mark items as ordered
+    let allOk = true;
+    for (const item of activeItems) {
+      const result = await window.dataSdk.update({ ...item, status: 'ordered' });
+      if (!result.isOk) allOk = false;
+    }
+
+    if (allOk) {
+      const orderNumber = Math.random().toString(36).substr(2, 9).toUpperCase();
+      showToast(`🎉 Order #${orderNumber} confirmed!`, '#4ECDC4');
+      cancelPayment();
+      setTimeout(() => navigateTo('deals'), 2000);
+    } else {
+      showToast('Payment successful but order save failed', '#FF6B6B');
+    }
+  } catch (err) {
+    document.getElementById('card-errors').textContent = 'Payment error: ' + err.message;
+    btn.disabled = false;
+    btn.textContent = 'Complete Payment';
+  }
+}
+
+function updateCartBadge() {
+  const count = cartItems.filter(i => i.status === 'cart').length;
+  const badge = document.getElementById('cart-badge');
+  const badgeMob = document.getElementById('cart-badge-mobile');
+  if (count > 0) { badge.style.display = 'flex'; badge.textContent = count; } else { badge.style.display = 'none'; }
+  badgeMob.textContent = count;
+}
+
+async function placeOrder() {
+  const activeItems = cartItems.filter(i => i.status === 'cart');
+  if (activeItems.length === 0) return;
+
+  // Show inline confirmation
+  const overlay = document.getElementById('confirm-overlay');
+  const subtotal = activeItems.reduce((s, i) => s + i.price * i.quantity, 0);
+  const discount = promoDiscount;
+  const shipCost = shippingMethod === 'superfast' ? 12.99 : 0;
+  const total = (subtotal - discount) + shipCost;
+  const promoText = appliedPromoCode ? `<p class="text-xs text-gray-500 mb-2">Promo: <strong>${appliedPromoCode}</strong> (-$${discount.toFixed(2)})</p>` : '';
+ 
+  overlay.innerHTML = `
+    <div class="rounded-2xl p-8 max-w-md w-full mx-4" style="background:#fff;">
+      <h3 class="text-xl font-bold mb-3" style="color:#333;">Confirm Your Order</h3>
+      <p class="text-gray-500 text-sm mb-2">${activeItems.length} item(s) · ${shippingMethod === 'superfast' ? '⚡ Super-Fast Shipping' : 'Regular Delivery'}</p>
+      ${promoText}
+      <p class="font-bold text-2xl mb-5" style="color:#FF6B6B;">$${total.toFixed(2)}</p>
+      <p class="text-xs text-gray-400 mb-6">Supplies will be sent to your AAE cart. You'll receive a verification notification. (Demo)</p>
+      <div class="flex gap-3">
+        <button onclick="confirmOrder()" class="flex-1 py-3 rounded-xl font-bold text-white" style="background:#4ECDC4;">Confirm</button>
+        <button onclick="document.getElementById('confirm-overlay').style.display='none'" class="flex-1 py-3 rounded-xl font-bold" style="background:#f0f0f0; color:#333;">Cancel</button>
+      </div>
+    </div>`;
+  overlay.style.display = 'flex';
+}
+
+async function confirmOrder() {
+  document.getElementById('confirm-overlay').style.display = 'none';
+  const btn = document.getElementById('place-order-btn');
+  btn.textContent = 'Processing...'; btn.disabled = true;
+
+  const activeItems = cartItems.filter(i => i.status === 'cart');
+  let allOk = true;
+  for (const item of activeItems) {
+    const result = await window.dataSdk.update({ ...item, status: 'ordered' });
+    if (!result.isOk) allOk = false;
+  }
+
+  btn.textContent = 'Place Order'; btn.disabled = false;
+  if (allOk) {
+    showToast('🎉 Order placed! AAE cart updated & notification sent (demo)', '#4ECDC4');
+    setTimeout(() => navigateTo('deals'), 1500);
+  } else {
+    showToast('Some items failed to process', '#FF6B6B');
+  }
+}
+
+// ============ TOAST ============
+function showToast(msg, color) {
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.style.background = color || '#4ECDC4';
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3200);
+}
+
+// ============ DATA SDK ============
+const dataHandler = {
+  onDataChanged(data) {
+    cartItems = data;
+    updateCartBadge();
+    if (currentPage === 'cart') renderCart();
+  }
+};
+
+// ============ ELEMENT SDK ============
+const defaultConfig = {
+  store_name: 'FRSH CO.',
+  tagline: 'Custom apparel made just for you.',
+  hero_heading: 'Fresh Drops, Hot Deals',
+  hero_subtext: 'Custom apparel made just for you. Design it, wear it, own it.',
+  about_heading: 'About Us',
+  about_paragraph: 'We\'re a custom apparel brand built on creativity, quality, and self-expression. Every piece is designed with care and printed to order so you always get something fresh. From bold graphic tees to cozy hoodies, we make it easy to wear what you love.',
+  deals_banner_text: '🔥 LIMITED TIME: 30% OFF all custom tees — Use code FRESH30 🔥',
+  footer_text: '© 2025 FRSH CO. All rights reserved.',
+  background_color: '#FAFAFA',
+  surface_color: '#FFFFFF',
+  text_color: '#333333',
+  primary_action_color: '#FF6B6B',
+  secondary_action_color: '#4ECDC4',
+  font_family: 'Outfit',
+  font_size: 16
+};
+
+function applyConfig(config) {
+  const c = { ...defaultConfig, ...config };
+  document.getElementById('nav-brand').textContent = c.store_name;
+  document.getElementById('hero-heading').textContent = c.hero_heading;
+  document.getElementById('hero-subtext').textContent = c.hero_subtext;
+  document.getElementById('about-heading').textContent = c.about_heading;
+  document.getElementById('about-paragraph').textContent = c.about_paragraph;
+  document.getElementById('deals-banner').textContent = c.deals_banner_text;
+  document.getElementById('footer-text').textContent = c.footer_text;
+
+  // Colors
+  document.getElementById('app').style.background = c.background_color;
+  document.querySelectorAll('.product-card, #cart-summary').forEach(el => el.style.background = c.surface_color);
+  document.getElementById('nav-brand').style.color = c.primary_action_color;
+
+  // Font
+  const fontStack = `${c.font_family}, 'Outfit', sans-serif`;
+  document.body.style.fontFamily = fontStack;
+  const baseSize = c.font_size;
+  document.getElementById('hero-heading').style.fontSize = `${baseSize * 3.5}px`;
+  document.getElementById('hero-subtext').style.fontSize = `${baseSize * 1.25}px`;
+  document.getElementById('about-heading').style.fontSize = `${baseSize * 2.5}px`;
+  document.getElementById('about-paragraph').style.fontSize = `${baseSize * 1.125}px`;
+}
+
+window.elementSdk.init({
+  defaultConfig,
+  onConfigChange: async (config) => applyConfig(config),
+  mapToCapabilities: (config) => ({
+    recolorables: [
+      { get: () => config.background_color || defaultConfig.background_color, set: (v) => { config.background_color = v; window.elementSdk.setConfig({ background_color: v }); } },
+      { get: () => config.surface_color || defaultConfig.surface_color, set: (v) => { config.surface_color = v; window.elementSdk.setConfig({ surface_color: v }); } },
+      { get: () => config.text_color || defaultConfig.text_color, set: (v) => { config.text_color = v; window.elementSdk.setConfig({ text_color: v }); } },
+      { get: () => config.primary_action_color || defaultConfig.primary_action_color, set: (v) => { config.primary_action_color = v; window.elementSdk.setConfig({ primary_action_color: v }); } },
+      { get: () => config.secondary_action_color || defaultConfig.secondary_action_color, set: (v) => { config.secondary_action_color = v; window.elementSdk.setConfig({ secondary_action_color: v }); } },
+    ],
+    borderables: [],
+    fontEditable: { get: () => config.font_family || defaultConfig.font_family, set: (v) => { config.font_family = v; window.elementSdk.setConfig({ font_family: v }); } },
+    fontSizeable: { get: () => config.font_size || defaultConfig.font_size, set: (v) => { config.font_size = v; window.elementSdk.setConfig({ font_size: v }); } },
+  }),
+  mapToEditPanelValues: (config) => new Map([
+    ['store_name', config.store_name || defaultConfig.store_name],
+    ['tagline', config.tagline || defaultConfig.tagline],
+    ['hero_heading', config.hero_heading || defaultConfig.hero_heading],
+    ['hero_subtext', config.hero_subtext || defaultConfig.hero_subtext],
+    ['about_heading', config.about_heading || defaultConfig.about_heading],
+    ['about_paragraph', config.about_paragraph || defaultConfig.about_paragraph],
+    ['deals_banner_text', config.deals_banner_text || defaultConfig.deals_banner_text],
+    ['footer_text', config.footer_text || defaultConfig.footer_text],
+  ])
+});
+
+// ============ INIT ============
+(async function init() {
+  // Initialize Stripe
+  stripe = Stripe('pk_test_51234567890abcdefghijklmnop');
+  elements = stripe.elements();
+  cardElement = elements.create('card', {
+    style: {
+      base: { fontFamily: '"Outfit", sans-serif', fontSize: '16px', color: '#333', '::placeholder': { color: '#999' } },
+      invalid: { color: '#FF6B6B' }
+    }
+  });
+
+  const dataResult = await window.dataSdk.init(dataHandler);
+  if (!dataResult.isOk) console.error('Data SDK init failed');
+  renderDeals();
+  renderCatalog('all');
+  renderManageProducts();
+  applyConfig(defaultConfig);
+  lucide.createIcons();
+})();
+</script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9e19fc8a83ca1cde',t:'MTc3NDQwMDUwOC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
