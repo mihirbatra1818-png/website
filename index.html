@@ -1,0 +1,2876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RESPOND — First Aid Typing Challenge</title>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Source+Code+Pro:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #C0392B;
+    --red-dark: #922B21;
+    --red-light: #F9EBEA;
+    --green: #1E8449;
+    --green-light: #EAFAF1;
+    --amber: #D4AC0D;
+    --amber-light: #FEFDE7;
+    --blue: #1A5276;
+    --blue-light: #EBF5FB;
+    --white: #FFFFFF;
+    --off-white: #F8F9FA;
+    --gray-light: #ECF0F1;
+    --gray: #BDC3C7;
+    --gray-mid: #7F8C8D;
+    --gray-dark: #2C3E50;
+    --black: #1A1A1A;
+    --font-display: 'Oswald', sans-serif;
+    --font-body: 'Inter', sans-serif;
+    --font-mono: 'Source Code Pro', monospace;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--black);
+    color: var(--white);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── PULSE ANIMATION ── */
+  @keyframes pulse-ring {
+    0% { transform: scale(0.95); opacity: 1; }
+    70% { transform: scale(1.15); opacity: 0; }
+    100% { transform: scale(0.95); opacity: 0; }
+  }
+  @keyframes heartbeat {
+    0%, 100% { transform: scale(1); }
+    14% { transform: scale(1.15); }
+    28% { transform: scale(1); }
+    42% { transform: scale(1.08); }
+    56% { transform: scale(1); }
+  }
+  @keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  @keyframes scanline {
+    0% { top: 0; }
+    100% { top: 100%; }
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  @keyframes ecg {
+    0% { stroke-dashoffset: 800; }
+    100% { stroke-dashoffset: 0; }
+  }
+
+  /* ── SCREENS ── */
+  .screen { display: none; min-height: 100vh; }
+  .screen.active { display: flex; flex-direction: column; animation: fadeIn 0.4s ease; }
+
+  /* ══════════════════════════════════
+     LANDING SCREEN
+  ══════════════════════════════════ */
+  #screen-landing {
+    background: var(--black);
+    position: relative;
+    overflow: hidden;
+  }
+  #screen-landing::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(255,255,255,0.015) 2px,
+      rgba(255,255,255,0.015) 4px
+    );
+    pointer-events: none;
+  }
+  .ecg-container {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 120px;
+    overflow: hidden;
+    opacity: 0.18;
+  }
+  .ecg-container svg {
+    width: 100%;
+    height: 100%;
+  }
+  .ecg-path {
+    stroke: #C0392B;
+    stroke-width: 2;
+    fill: none;
+    stroke-dasharray: 800;
+    animation: ecg 3s linear infinite;
+  }
+
+  .landing-inner {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    position: relative;
+    z-index: 2;
+  }
+
+  .cross-icon {
+    width: 72px; height: 72px;
+    background: var(--red);
+    border-radius: 4px;
+    position: relative;
+    margin-bottom: 1.5rem;
+    animation: heartbeat 2s ease-in-out infinite;
+    flex-shrink: 0;
+  }
+  .cross-icon::before, .cross-icon::after {
+    content: '';
+    position: absolute;
+    background: var(--white);
+    border-radius: 2px;
+  }
+  .cross-icon::before { width: 44px; height: 16px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .cross-icon::after { width: 16px; height: 44px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+  .game-title {
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 10vw, 7rem);
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    line-height: 1;
+    color: var(--white);
+    text-align: center;
+    margin-bottom: 0.4rem;
+  }
+  .game-title span { color: var(--red); }
+
+  .game-subtitle {
+    font-family: var(--font-display);
+    font-size: 1.1rem;
+    font-weight: 400;
+    letter-spacing: 0.25em;
+    color: var(--gray-mid);
+    text-transform: uppercase;
+    margin-bottom: 3rem;
+    text-align: center;
+  }
+
+  .landing-cards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 2rem;
+  }
+  @media (max-width: 500px) {
+    .landing-cards { grid-template-columns: 1fr; }
+  }
+
+  .landing-card {
+    background: #111;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+    transition: border-color 0.2s;
+  }
+  .landing-card:hover { border-color: var(--red); }
+
+  .card-role {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    letter-spacing: 0.06em;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .card-role .dot {
+    width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;
+  }
+  .dot-red { background: var(--red); }
+  .dot-green { background: var(--green); }
+
+  .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+  .form-label {
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    font-weight: 500;
+  }
+  .form-input, .form-select {
+    background: #1A1A1A;
+    border: 1px solid #333;
+    border-radius: 4px;
+    color: var(--white);
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    padding: 0.65rem 0.9rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .form-input:focus, .form-select:focus { border-color: var(--red); }
+  .form-select option { background: #1A1A1A; }
+
+  .btn-primary {
+    background: var(--red);
+    color: var(--white);
+    border: none;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 1rem;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+    padding: 0.85rem 1.5rem;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s, transform 0.1s;
+    text-transform: uppercase;
+  }
+  .btn-primary:hover { background: var(--red-dark); }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--gray-mid);
+    border: 1px solid #333;
+    border-radius: 4px;
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    font-weight: 400;
+    padding: 0.75rem 1.2rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-transform: uppercase;
+  }
+  .btn-secondary:hover { border-color: var(--gray-mid); color: var(--white); }
+
+  .info-bar {
+    font-size: 0.75rem;
+    color: #444;
+    text-align: center;
+    letter-spacing: 0.05em;
+    margin-top: 1rem;
+  }
+  .info-bar span { color: var(--gray-mid); }
+
+  /* ── SINGLEPLAYER CARD ── */
+  .landing-cards-solo {
+    width: 100%;
+    max-width: 680px;
+    margin-bottom: 1rem;
+  }
+  .solo-card {
+    background: #0D0D0D;
+    border: 1px solid #1E3A2A;
+    border-radius: 8px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .solo-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .solo-set-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 0.4rem;
+  }
+  .solo-set-btn {
+    background: #111;
+    border: 1px solid #1E1E1E;
+    border-radius: 4px;
+    padding: 0.45rem 0.7rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .solo-set-btn:hover { border-color: #2A6A3A; }
+  .solo-set-btn.selected { border-color: var(--green); background: rgba(30,132,73,0.1); }
+  .solo-set-btn-name { font-size: 0.78rem; font-weight: 500; color: var(--white); }
+  .solo-set-btn-desc { font-size: 0.67rem; color: var(--gray-mid); margin-top: 1px; }
+
+  /* ── SINGLEPLAYER GAME SCREEN ── */
+  #screen-solo {
+    background: var(--black);
+  }
+  .solo-header {
+    background: #0D0D0D;
+    border-bottom: 1px solid #1A1A1A;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .solo-stat-row { display: flex; align-items: center; gap: 1.5rem; }
+  .solo-stat { text-align: center; }
+  .solo-stat-val {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--white);
+    line-height: 1;
+    transition: color 0.3s ease;
+  }
+  .solo-stat-lbl {
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-top: 2px;
+  }
+  .solo-passage-badge {
+    font-family: var(--font-display);
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--green);
+    background: rgba(30,132,73,0.1);
+    border: 1px solid rgba(30,132,73,0.3);
+    padding: 0.3rem 0.8rem;
+    border-radius: 3px;
+  }
+  .solo-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 260px;
+    overflow: hidden;
+    max-height: calc(100vh - 64px);
+  }
+  @media (max-width: 700px) {
+    .solo-body { grid-template-columns: 1fr; max-height: none; }
+  }
+  .solo-typing-area {
+    padding: 1.75rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    overflow-y: auto;
+  }
+  .solo-sidebar {
+    border-left: 1px solid #1A1A1A;
+    background: #060606;
+    padding: 1.5rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .wpm-chart-wrap {
+    background: #0A0A0A;
+    border: 1px solid #1A1A1A;
+    border-radius: 6px;
+    padding: 0.75rem;
+  }
+  .wpm-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 60px;
+  }
+  .wpm-bar {
+    flex: 1;
+    border-radius: 2px 2px 0 0;
+    background: var(--green);
+    opacity: 0.7;
+    min-height: 3px;
+    transition: height 0.4s ease;
+  }
+  .wpm-bar.current { opacity: 1; background: var(--red); }
+  .solo-best-box {
+    background: #0D0D0D;
+    border: 1px solid #1A1A1A;
+    border-radius: 6px;
+    padding: 0.85rem 1rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  .solo-mini-stat { text-align: center; }
+  .solo-mini-val {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--red);
+  }
+  .solo-mini-lbl {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-top: 2px;
+  }
+
+  /* ── SOLO COMPLETE OVERLAY ── */
+  .solo-complete-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 150;
+  }
+  .solo-complete-overlay.show { display: flex; }
+  .solo-complete-box {
+    background: #0D0D0D;
+    border: 1px solid #2A2A2A;
+    border-radius: 10px;
+    padding: 2rem;
+    max-width: 480px;
+    width: 90%;
+    animation: slideUp 0.3s ease;
+  }
+  .solo-complete-title {
+    font-family: var(--font-display);
+    font-size: 1.6rem;
+    letter-spacing: 0.06em;
+    color: var(--white);
+    margin-bottom: 0.3rem;
+  }
+  .solo-complete-sub {
+    font-size: 0.78rem;
+    color: var(--gray-mid);
+    margin-bottom: 1.25rem;
+    letter-spacing: 0.05em;
+  }
+  .solo-complete-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+  }
+  .solo-complete-stat {
+    background: #111;
+    border: 1px solid #1A1A1A;
+    border-radius: 6px;
+    padding: 0.75rem;
+    text-align: center;
+  }
+  .solo-complete-val {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--red);
+  }
+  .solo-complete-lbl {
+    font-size: 0.6rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-top: 3px;
+  }
+  .solo-complete-fact {
+    background: #111;
+    border: 1px solid #1A1A1A;
+    border-left: 3px solid var(--green);
+    border-radius: 4px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.25rem;
+    font-size: 0.82rem;
+    color: var(--gray-mid);
+    line-height: 1.5;
+  }
+  .solo-complete-fact strong { color: var(--white); }
+  .solo-complete-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .solo-complete-actions .btn-primary { flex: 1; min-width: 140px; }
+  .solo-complete-actions .btn-secondary { flex: 1; min-width: 120px; }
+
+  /* ══════════════════════════════════
+     LOBBY SCREEN
+  ══════════════════════════════════ */
+  #screen-lobby {
+    background: var(--black);
+  }
+  .lobby-header {
+    background: #0D0D0D;
+    border-bottom: 1px solid #222;
+    padding: 1rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .lobby-header-left { display: flex; align-items: center; gap: 1rem; }
+  .lobby-logo-small {
+    width: 32px; height: 32px;
+    background: var(--red);
+    border-radius: 3px;
+    position: relative; flex-shrink: 0;
+  }
+  .lobby-logo-small::before, .lobby-logo-small::after {
+    content: ''; position: absolute;
+    background: var(--white); border-radius: 1px;
+  }
+  .lobby-logo-small::before { width: 20px; height: 7px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .lobby-logo-small::after { width: 7px; height: 20px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+  .lobby-game-name {
+    font-family: var(--font-display);
+    font-size: 1.3rem;
+    letter-spacing: 0.08em;
+    color: var(--white);
+  }
+  .lobby-room-badge {
+    font-family: var(--font-mono);
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: 0.2em;
+    color: var(--red);
+    background: rgba(192,57,43,0.1);
+    border: 1px solid rgba(192,57,43,0.3);
+    padding: 0.3rem 0.8rem;
+    border-radius: 4px;
+  }
+  .lobby-room-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 2px;
+  }
+
+  .lobby-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 0;
+    max-height: calc(100vh - 68px);
+    overflow: hidden;
+  }
+  @media (max-width: 700px) {
+    .lobby-body { grid-template-columns: 1fr; max-height: none; overflow: auto; }
+  }
+
+  .lobby-main {
+    padding: 2rem;
+    overflow-y: auto;
+    border-right: 1px solid #1A1A1A;
+  }
+  .lobby-sidebar {
+    padding: 2rem;
+    overflow-y: auto;
+    background: #080808;
+  }
+
+  .section-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #222;
+  }
+
+  .players-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .player-chip {
+    background: #111;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    animation: slideUp 0.3s ease;
+    transition: border-color 0.2s;
+  }
+  .player-chip.eliminated { opacity: 0.35; border-color: #1A1A1A; }
+  .player-avatar {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .player-info { min-width: 0; }
+  .player-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .player-wpm {
+    font-size: 0.7rem;
+    color: var(--gray-mid);
+    font-family: var(--font-mono);
+  }
+
+  .passage-selector { margin-bottom: 2rem; }
+  .passage-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  @media (max-width: 500px) { .passage-grid { grid-template-columns: 1fr; } }
+  .passage-btn {
+    background: #111;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.2s;
+  }
+  .passage-btn:hover { border-color: #444; }
+  .passage-btn.selected { border-color: var(--red); background: rgba(192,57,43,0.08); }
+  .passage-btn-name {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--white);
+    margin-bottom: 2px;
+  }
+  .passage-btn-desc {
+    font-size: 0.72rem;
+    color: var(--gray-mid);
+    line-height: 1.4;
+  }
+
+  .elim-settings { margin-bottom: 2rem; }
+  .setting-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #1A1A1A;
+  }
+  .setting-label { font-size: 0.85rem; color: var(--gray-mid); }
+  .setting-value {
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .stepper-btn {
+    background: #1A1A1A;
+    border: 1px solid #333;
+    color: var(--white);
+    width: 24px; height: 24px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .stepper-btn:hover { background: #2A2A2A; }
+
+  /* ══════════════════════════════════
+     COUNTDOWN SCREEN
+  ══════════════════════════════════ */
+  #screen-countdown {
+    background: var(--black);
+    align-items: center;
+    justify-content: center;
+  }
+  .countdown-inner { text-align: center; }
+  .countdown-round {
+    font-family: var(--font-display);
+    font-size: 0.9rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 1rem;
+  }
+  .countdown-number {
+    font-family: var(--font-display);
+    font-size: clamp(6rem, 20vw, 12rem);
+    font-weight: 700;
+    color: var(--red);
+    line-height: 1;
+    animation: heartbeat 1s ease-in-out infinite;
+  }
+  .countdown-label {
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    letter-spacing: 0.2em;
+    color: var(--gray-mid);
+    margin-top: 1rem;
+  }
+
+  /* ══════════════════════════════════
+     GAME SCREEN
+  ══════════════════════════════════ */
+  #screen-game {
+    background: var(--black);
+    flex-direction: column;
+  }
+
+  .game-header {
+    background: #0D0D0D;
+    border-bottom: 1px solid #1A1A1A;
+    padding: 0.75rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .game-stat-group { display: flex; align-items: center; gap: 1.5rem; }
+  .game-stat { text-align: center; }
+  .game-stat-value {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--white);
+    line-height: 1;
+  }
+  .game-stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-top: 2px;
+  }
+  .round-badge {
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    background: rgba(192,57,43,0.15);
+    border: 1px solid rgba(192,57,43,0.4);
+    color: var(--red);
+    padding: 0.3rem 0.8rem;
+    border-radius: 3px;
+  }
+
+  .game-body {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 280px;
+    overflow: hidden;
+    max-height: calc(100vh - 64px);
+  }
+  @media (max-width: 700px) {
+    .game-body { grid-template-columns: 1fr; max-height: none; }
+  }
+
+  .typing-area {
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    overflow-y: auto;
+  }
+
+  .scenario-card {
+    background: #0D0D0D;
+    border: 1px solid #222;
+    border-left: 3px solid var(--red);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+  }
+  .scenario-label {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--red);
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+  }
+  .scenario-text {
+    font-size: 0.9rem;
+    color: var(--gray-mid);
+    line-height: 1.5;
+  }
+  .scenario-text strong { color: var(--white); font-weight: 500; }
+
+  .passage-display {
+    background: #080808;
+    border: 1px solid #1A1A1A;
+    border-radius: 6px;
+    padding: 1.25rem 1.5rem;
+    font-family: var(--font-mono);
+    font-size: 1.05rem;
+    line-height: 2;
+    letter-spacing: 0.02em;
+    position: relative;
+  }
+  .char-correct { color: var(--green); }
+  .char-error { color: var(--red); text-decoration: underline; }
+  .char-pending { color: #444; }
+  .char-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 1.1em;
+    background: var(--red);
+    vertical-align: text-bottom;
+    animation: blink 0.8s step-end infinite;
+    margin-left: -1px;
+  }
+
+  .input-area { position: relative; }
+  .typing-input {
+    background: #0D0D0D;
+    border: 1px solid #2A2A2A;
+    border-radius: 6px;
+    color: var(--white);
+    font-family: var(--font-mono);
+    font-size: 1rem;
+    padding: 1rem 1.25rem;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+    caret-color: var(--red);
+  }
+  .typing-input:focus { border-color: var(--red); }
+  .typing-input.error { border-color: var(--red); background: rgba(192,57,43,0.06); animation: shake 0.3s ease; }
+  .typing-input:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* Leaderboard sidebar */
+  .live-sidebar {
+    border-left: 1px solid #1A1A1A;
+    background: #060606;
+    padding: 1.5rem;
+    overflow-y: auto;
+  }
+  .live-player-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 0;
+    border-bottom: 1px solid #0F0F0F;
+    transition: opacity 0.3s;
+  }
+  .live-player-row.eliminated { opacity: 0.25; }
+  .live-rank {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--gray-mid);
+    width: 20px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .live-bar-wrap {
+    flex: 1;
+    background: #111;
+    border-radius: 2px;
+    height: 4px;
+    overflow: hidden;
+  }
+  .live-bar-fill {
+    height: 4px;
+    border-radius: 2px;
+    background: var(--red);
+    transition: width 0.4s ease;
+  }
+  .live-bar-fill.safe { background: var(--green); }
+  .live-bar-fill.danger { background: var(--red); }
+  .live-player-name-small {
+    font-size: 0.78rem;
+    color: var(--gray-mid);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 80px;
+  }
+  .live-wpm-small {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--white);
+    min-width: 38px;
+    text-align: right;
+  }
+
+  .danger-zone {
+    background: rgba(192,57,43,0.08);
+    border: 1px dashed rgba(192,57,43,0.3);
+    border-radius: 4px;
+    padding: 0.5rem 0.75rem;
+    margin-top: 1rem;
+    font-size: 0.72rem;
+    color: var(--red);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  /* ══════════════════════════════════
+     ROUND OVER SCREEN
+  ══════════════════════════════════ */
+  #screen-roundover {
+    background: var(--black);
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .roundover-inner {
+    width: 100%;
+    max-width: 640px;
+  }
+  .roundover-title {
+    font-family: var(--font-display);
+    font-size: 2.5rem;
+    letter-spacing: 0.08em;
+    color: var(--white);
+    margin-bottom: 0.3rem;
+  }
+  .roundover-subtitle {
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 2rem;
+  }
+  .results-list { margin-bottom: 2rem; }
+  .result-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    border-radius: 6px;
+    margin-bottom: 0.5rem;
+    background: #0D0D0D;
+    border: 1px solid #1A1A1A;
+    animation: slideUp 0.3s ease both;
+  }
+  .result-row.eliminated-row {
+    border-color: rgba(192,57,43,0.3);
+    background: rgba(192,57,43,0.05);
+  }
+  .result-rank-num {
+    font-family: var(--font-display);
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--gray-mid);
+    width: 32px;
+    text-align: center;
+    flex-shrink: 0;
+  }
+  .result-rank-num.gold { color: #F4D03F; }
+  .result-player-name {
+    flex: 1;
+    font-size: 1rem;
+    font-weight: 500;
+  }
+  .result-wpm {
+    font-family: var(--font-mono);
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--white);
+  }
+  .result-wpm-label {
+    font-size: 0.65rem;
+    color: var(--gray-mid);
+    letter-spacing: 0.1em;
+  }
+  .result-badge {
+    font-size: 0.68rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.6rem;
+    border-radius: 3px;
+  }
+  .badge-safe { background: rgba(30,132,73,0.15); color: var(--green); border: 1px solid rgba(30,132,73,0.3); }
+  .badge-elim { background: rgba(192,57,43,0.15); color: var(--red); border: 1px solid rgba(192,57,43,0.3); }
+
+  /* Fact card shown on round over */
+  .fact-card {
+    background: #0D0D0D;
+    border: 1px solid #222;
+    border-left: 3px solid var(--green);
+    border-radius: 6px;
+    padding: 1rem 1.25rem;
+    margin-bottom: 2rem;
+  }
+  .fact-tag {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--green);
+    margin-bottom: 0.5rem;
+  }
+  .fact-text { font-size: 0.9rem; color: var(--gray-mid); line-height: 1.5; }
+  .fact-text strong { color: var(--white); }
+
+  .roundover-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+  .roundover-actions .btn-primary { max-width: 240px; }
+
+  /* ══════════════════════════════════
+     FINAL SCREEN
+  ══════════════════════════════════ */
+  #screen-final {
+    background: var(--black);
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+  }
+  .final-inner { width: 100%; max-width: 540px; text-align: center; }
+  .final-pulse {
+    width: 100px; height: 100px;
+    background: var(--red);
+    border-radius: 50%;
+    margin: 0 auto 2rem;
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+    animation: heartbeat 1.5s ease-in-out infinite;
+  }
+  .final-pulse::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border-radius: 50%;
+    border: 2px solid var(--red);
+    opacity: 0;
+    animation: pulse-ring 2s ease-out infinite;
+  }
+  .final-cross {
+    width: 50px; height: 50px;
+    position: relative;
+  }
+  .final-cross::before, .final-cross::after {
+    content: ''; position: absolute;
+    background: var(--white); border-radius: 2px;
+  }
+  .final-cross::before { width: 32px; height: 12px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+  .final-cross::after { width: 12px; height: 32px; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+
+  .final-winner-name {
+    font-family: var(--font-display);
+    font-size: clamp(2rem, 8vw, 4rem);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+  }
+  .final-winner-label {
+    font-size: 0.8rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 0.5rem;
+  }
+  .final-winner-sub {
+    font-size: 0.85rem;
+    color: var(--gray-mid);
+    margin-bottom: 2.5rem;
+    line-height: 1.5;
+  }
+  .final-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+    margin-bottom: 2.5rem;
+  }
+  .final-stat-box {
+    background: #111;
+    border: 1px solid #1A1A1A;
+    border-radius: 6px;
+    padding: 1rem;
+  }
+  .final-stat-val {
+    font-family: var(--font-display);
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--red);
+  }
+  .final-stat-lbl {
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-top: 4px;
+  }
+
+  /* ══════════════════════════════════
+     WAITING / SPECTATOR
+  ══════════════════════════════════ */
+  .waiting-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+    display: none;
+  }
+  .waiting-overlay.show { display: flex; }
+  .waiting-box {
+    background: #0D0D0D;
+    border: 1px solid #222;
+    border-radius: 8px;
+    padding: 2.5rem;
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+  }
+  .waiting-icon {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    display: block;
+  }
+  .waiting-title {
+    font-family: var(--font-display);
+    font-size: 1.5rem;
+    letter-spacing: 0.08em;
+    color: var(--white);
+    margin-bottom: 0.5rem;
+  }
+  .waiting-msg {
+    font-size: 0.85rem;
+    color: var(--gray-mid);
+    line-height: 1.5;
+  }
+
+  /* ══════════════════════════════════
+     TEACHER PANEL (floating)
+  ══════════════════════════════════ */
+  .teacher-panel {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    z-index: 200;
+    display: none;
+  }
+  .teacher-panel.show { display: block; }
+  .teacher-toggle {
+    width: 48px; height: 48px;
+    background: var(--red);
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 12px rgba(192,57,43,0.4);
+    font-size: 1.2rem;
+    color: var(--white);
+    font-family: var(--font-display);
+    font-weight: 700;
+    transition: transform 0.2s;
+  }
+  .teacher-toggle:hover { transform: scale(1.08); }
+  .teacher-drawer {
+    position: absolute;
+    bottom: 60px;
+    right: 0;
+    background: #0D0D0D;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 1.25rem;
+    width: 220px;
+    display: none;
+  }
+  .teacher-drawer.open { display: block; animation: slideUp 0.2s ease; }
+  .teacher-drawer-title {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--gray-mid);
+    margin-bottom: 1rem;
+  }
+  .teacher-btn {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: 1px solid #333;
+    color: var(--white);
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.6rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-bottom: 0.5rem;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .teacher-btn:hover { border-color: var(--red); color: var(--red); }
+  .teacher-btn.danger { border-color: rgba(192,57,43,0.4); color: var(--red); }
+  .teacher-btn.danger:hover { background: rgba(192,57,43,0.1); }
+
+  /* Notification toast */
+  .toast {
+    position: fixed;
+    top: 1.5rem;
+    right: 1.5rem;
+    background: #0D0D0D;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 0.85rem 1.25rem;
+    font-size: 0.85rem;
+    color: var(--white);
+    z-index: 300;
+    animation: slideUp 0.3s ease;
+    max-width: 320px;
+  }
+  .toast.success { border-color: rgba(30,132,73,0.5); }
+  .toast.error { border-color: rgba(192,57,43,0.5); }
+</style>
+</head>
+<body>
+
+<!-- ══ LANDING SCREEN ══════════════════════════════════ -->
+<div id="screen-landing" class="screen active">
+  <div class="ecg-container">
+    <svg viewBox="0 0 1200 80" preserveAspectRatio="none">
+      <path class="ecg-path" d="M0,40 L100,40 L120,40 L130,10 L140,70 L150,5 L165,65 L175,40 L300,40 L320,40 L330,10 L340,70 L350,5 L365,65 L375,40 L500,40 L520,40 L530,10 L540,70 L550,5 L565,65 L575,40 L700,40 L720,40 L730,10 L740,70 L750,5 L765,65 L775,40 L900,40 L920,40 L930,10 L940,70 L950,5 L965,65 L975,40 L1200,40"/>
+    </svg>
+  </div>
+  <div class="landing-inner">
+    <div class="cross-icon"></div>
+    <h1 class="game-title">RE<span>S</span>POND</h1>
+    <p class="game-subtitle">First Aid Typing Challenge &nbsp;·&nbsp; Solo &amp; Multiplayer</p>
+
+    <!-- Solo card -->
+    <div class="landing-cards-solo">
+      <div class="solo-card">
+        <div class="solo-card-header">
+          <div class="card-role">
+            <div class="dot" style="background:var(--green);"></div>
+            Solo Practice
+          </div>
+          <div style="display:flex;align-items:center;gap:0.75rem;flex-wrap:wrap;">
+            <div class="form-group" style="margin:0;">
+              <input type="text" class="form-input" id="solo-name" placeholder="Your name" style="width:160px;">
+            </div>
+            <button class="btn-primary" onclick="startSolo()" style="width:auto;padding:0.65rem 1.25rem;white-space:nowrap;">
+              Solo Run
+            </button>
+          </div>
+        </div>
+        <div>
+          <div class="form-label" style="margin-bottom:0.5rem;">Choose a topic</div>
+          <div class="solo-set-grid" id="solo-set-grid"></div>
+        </div>
+      </div>
+    </div>
+
+    <div style="width:100%;max-width:680px;display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;">
+      <div style="flex:1;height:1px;background:#1A1A1A;"></div>
+      <div style="font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;color:#333;">or join / host multiplayer</div>
+      <div style="flex:1;height:1px;background:#1A1A1A;"></div>
+    </div>
+
+    <div class="landing-cards">
+      <!-- Student Card -->
+      <div class="landing-card">
+        <div class="card-role">
+          <div class="dot dot-red"></div>
+          Responder
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your Name</label>
+          <input type="text" class="form-input" id="student-name" placeholder="First name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Class Period</label>
+          <select class="form-select" id="student-period">
+            <option value="">— Select —</option>
+            <option>1st Period</option>
+            <option>2nd Period</option>
+            <option>3rd Period</option>
+            <option>4th Period</option>
+            <option>5th Period</option>
+            <option>6th Period</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Room Code</label>
+          <input type="text" class="form-input" id="student-room" placeholder="e.g. AED7" maxlength="6" style="text-transform:uppercase; font-family: var(--font-mono); letter-spacing: 0.15em;">
+        </div>
+        <button class="btn-primary" onclick="joinRoom()">Enter the Triage Zone</button>
+      </div>
+
+      <!-- Teacher Card -->
+      <div class="landing-card">
+        <div class="card-role">
+          <div class="dot dot-green"></div>
+          Instructor
+        </div>
+        <div class="form-group">
+          <label class="form-label">Instructor PIN</label>
+          <input type="password" class="form-input" id="teacher-pin" placeholder="Enter PIN" value="">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Your Name</label>
+          <input type="text" class="form-input" id="teacher-name" placeholder="Name or initials">
+        </div>
+        <button class="btn-primary" onclick="createRoom()" style="background: #1A4A2A; border: 1px solid #2A6A3A;">
+          Open the Room
+        </button>
+        <p style="font-size: 0.72rem; color: #444; line-height: 1.4;">Default PIN: 1234 &nbsp;·&nbsp; Share room code with students</p>
+      </div>
+    </div>
+
+    <p class="info-bar">Based on <span>American Red Cross Check · Call · Care</span> &nbsp;·&nbsp; For educational use</p>
+  </div>
+</div>
+
+<!-- ══ LOBBY SCREEN ══════════════════════════════════ -->
+<div id="screen-lobby" class="screen">
+  <div class="lobby-header">
+    <div class="lobby-header-left">
+      <div class="lobby-logo-small"></div>
+      <div class="lobby-game-name">RESPOND</div>
+    </div>
+    <div>
+      <div class="lobby-room-label">Room Code</div>
+      <div class="lobby-room-badge" id="lobby-room-display">——</div>
+    </div>
+  </div>
+
+  <div class="lobby-body">
+    <div class="lobby-main">
+      <div class="section-label">Responders in the Room (<span id="player-count">0</span>)</div>
+      <div class="players-grid" id="players-grid"></div>
+
+      <!-- Teacher-only controls -->
+      <div id="teacher-controls" style="display:none;">
+        <div class="section-label">Passage Set</div>
+        <div class="passage-grid" id="passage-grid"></div>
+
+        <div class="section-label" style="margin-top:1.5rem;">Elimination Settings</div>
+        <div class="elim-settings">
+          <div class="setting-row">
+            <span class="setting-label">Eliminate per round</span>
+            <div class="setting-value">
+              <button class="stepper-btn" onclick="adjustElim(-1)">-</button>
+              <span id="elim-count">1</span>
+              <button class="stepper-btn" onclick="adjustElim(1)">+</button>
+            </div>
+          </div>
+          <div class="setting-row">
+            <span class="setting-label">Min players to start</span>
+            <div class="setting-value" id="min-players-display">2</div>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="start-game-btn" onclick="startGame()" disabled>
+          Start Round 1 — Dispatch All Units
+        </button>
+      </div>
+
+      <div id="student-waiting" style="display:none;">
+        <div style="background:#0D0D0D; border:1px solid #1A1A1A; border-radius:6px; padding:1.5rem; text-align:center; margin-top:1rem;">
+          <div style="font-size:1.5rem; margin-bottom:0.75rem; position:relative; display:inline-block;">
+            <div style="width:20px;height:20px;border-radius:50%;background:var(--red);display:inline-block;animation:heartbeat 1.5s ease-in-out infinite;"></div>
+          </div>
+          <div style="font-family:var(--font-display);font-size:1.1rem;letter-spacing:0.08em;color:var(--white);margin-bottom:0.5rem;">Standby for Dispatch</div>
+          <div style="font-size:0.82rem;color:var(--gray-mid);line-height:1.5;">Waiting for your instructor to start the round. Review the <strong style="color:var(--white);">Check · Call · Care</strong> steps while you wait.</div>
+        </div>
+        <div style="margin-top:1.5rem;">
+          <div class="section-label">Quick Review</div>
+          <div id="quick-review-cards"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lobby-sidebar">
+      <div class="section-label">How to Play</div>
+      <div style="font-size:0.82rem; color:var(--gray-mid); line-height:1.6; margin-bottom:1.5rem;">
+        <p style="margin-bottom:0.75rem;">Type the first aid passages as fast and accurately as possible. After each round, the <span style="color:var(--red);">slowest typists</span> are eliminated.</p>
+        <p style="margin-bottom:0.75rem;">Last responder standing wins. Accuracy counts — errors slow you down.</p>
+      </div>
+      <div class="section-label">The 3 Steps</div>
+      <div style="display:flex;flex-direction:column;gap:0.5rem;">
+        <div style="background:#0D0D0D;border:1px solid #1A1A1A;border-left:3px solid var(--red);border-radius:4px;padding:0.75rem 1rem;">
+          <div style="font-family:var(--font-display);font-size:1rem;letter-spacing:0.06em;color:var(--red);margin-bottom:2px;">CHECK</div>
+          <div style="font-size:0.78rem;color:var(--gray-mid);line-height:1.4;">Ensure the scene is safe. Check for responsiveness. Assess the situation.</div>
+        </div>
+        <div style="background:#0D0D0D;border:1px solid #1A1A1A;border-left:3px solid var(--amber);border-radius:4px;padding:0.75rem 1rem;">
+          <div style="font-family:var(--font-display);font-size:1rem;letter-spacing:0.06em;color:var(--amber);margin-bottom:2px;">CALL</div>
+          <div style="font-size:0.78rem;color:var(--gray-mid);line-height:1.4;">Call 9-1-1 or have someone call. Activate the emergency response system.</div>
+        </div>
+        <div style="background:#0D0D0D;border:1px solid #1A1A1A;border-left:3px solid var(--green);border-radius:4px;padding:0.75rem 1rem;">
+          <div style="font-family:var(--font-display);font-size:1rem;letter-spacing:0.06em;color:var(--green);margin-bottom:2px;">CARE</div>
+          <div style="font-size:0.78rem;color:var(--gray-mid);line-height:1.4;">Provide first aid until help arrives. CPR, bleeding control, rescue breathing.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SOLO SCREEN ══════════════════════════════════ -->
+<div id="screen-solo" class="screen">
+  <div class="solo-header">
+    <div class="solo-stat-row">
+      <div class="solo-stat">
+        <div class="solo-stat-val" id="solo-stat-wpm">0</div>
+        <div class="solo-stat-lbl">WPM</div>
+      </div>
+      <div class="solo-stat">
+        <div class="solo-stat-val" id="solo-stat-acc">100%</div>
+        <div class="solo-stat-lbl">Accuracy</div>
+      </div>
+      <div class="solo-stat">
+        <div class="solo-stat-val" id="solo-stat-progress">0%</div>
+        <div class="solo-stat-lbl">Progress</div>
+      </div>
+    </div>
+    <div class="solo-passage-badge" id="solo-passage-badge">Passage 1 of 5</div>
+    <button class="btn-secondary" onclick="exitSolo()" style="padding:0.4rem 0.9rem;font-size:0.78rem;">Exit</button>
+  </div>
+
+  <div class="solo-body">
+    <div class="solo-typing-area">
+      <div class="scenario-card" id="solo-scenario-card">
+        <div class="scenario-label">Emergency Scenario</div>
+        <div class="scenario-text" id="solo-scenario-text">Loading...</div>
+      </div>
+      <div class="passage-display" id="solo-passage-display"></div>
+      <div class="input-area">
+        <input
+          type="text"
+          class="typing-input"
+          id="solo-typing-input"
+          placeholder="Begin typing the passage above..."
+          autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"
+        >
+      </div>
+    </div>
+
+    <div class="solo-sidebar">
+      <div class="section-label">Your Session</div>
+
+      <div class="wpm-chart-wrap">
+        <div style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gray-mid);margin-bottom:0.5rem;">WPM per passage</div>
+        <div class="wpm-bars" id="solo-wpm-bars">
+          <div class="wpm-bar current" style="height:3px;"></div>
+          <div class="wpm-bar" style="height:3px;opacity:0.2;"></div>
+          <div class="wpm-bar" style="height:3px;opacity:0.2;"></div>
+          <div class="wpm-bar" style="height:3px;opacity:0.2;"></div>
+          <div class="wpm-bar" style="height:3px;opacity:0.2;"></div>
+        </div>
+      </div>
+
+      <div class="solo-best-box">
+        <div class="solo-mini-stat">
+          <div class="solo-mini-val" id="solo-best-wpm">—</div>
+          <div class="solo-mini-lbl">Best WPM</div>
+        </div>
+        <div class="solo-mini-stat">
+          <div class="solo-mini-val" id="solo-avg-wpm">—</div>
+          <div class="solo-mini-lbl">Avg WPM</div>
+        </div>
+        <div class="solo-mini-stat">
+          <div class="solo-mini-val" id="solo-total-words">0</div>
+          <div class="solo-mini-lbl">Words Typed</div>
+        </div>
+        <div class="solo-mini-stat">
+          <div class="solo-mini-val" id="solo-passages-done">0</div>
+          <div class="solo-mini-lbl">Done</div>
+        </div>
+      </div>
+
+      <div class="section-label" style="margin-top:0.25rem;">Did You Know?</div>
+      <div style="background:#0D0D0D;border:1px solid #1A1A1A;border-left:3px solid var(--green);border-radius:4px;padding:0.75rem;font-size:0.77rem;color:var(--gray-mid);line-height:1.5;" id="solo-fact-sidebar">
+        Loading first aid fact...
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SOLO COMPLETE OVERLAY ══════════════════════════════════ -->
+<div class="solo-complete-overlay" id="solo-complete-overlay">
+  <div class="solo-complete-box">
+    <div class="solo-complete-title" id="solo-complete-title">Session Complete</div>
+    <div class="solo-complete-sub" id="solo-complete-sub">5 passages · First Aid Certified Typist</div>
+    <div class="solo-complete-stats">
+      <div class="solo-complete-stat">
+        <div class="solo-complete-val" id="solo-final-best">—</div>
+        <div class="solo-complete-lbl">Best WPM</div>
+      </div>
+      <div class="solo-complete-stat">
+        <div class="solo-complete-val" id="solo-final-avg">—</div>
+        <div class="solo-complete-lbl">Avg WPM</div>
+      </div>
+      <div class="solo-complete-stat">
+        <div class="solo-complete-val" id="solo-final-acc">—</div>
+        <div class="solo-complete-lbl">Accuracy</div>
+      </div>
+    </div>
+    <div class="solo-complete-fact" id="solo-complete-fact"></div>
+    <div class="solo-complete-actions">
+      <button class="btn-primary" onclick="restartSolo()">Play Again</button>
+      <button class="btn-secondary" onclick="exitSolo()">Main Menu</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ COUNTDOWN SCREEN ══════════════════════════════════ -->
+<div id="screen-countdown" class="screen">
+  <div class="countdown-inner">
+    <div class="countdown-round" id="countdown-round-label">Round 1</div>
+    <div class="countdown-number" id="countdown-number">3</div>
+    <div class="countdown-label">Prepare to Respond</div>
+  </div>
+</div>
+
+<!-- ══ GAME SCREEN ══════════════════════════════════ -->
+<div id="screen-game" class="screen">
+  <div class="game-header">
+    <div class="game-stat-group">
+      <div class="game-stat">
+        <div class="game-stat-value" id="stat-wpm">0</div>
+        <div class="game-stat-label">WPM</div>
+      </div>
+      <div class="game-stat">
+        <div class="game-stat-value" id="stat-acc">100%</div>
+        <div class="game-stat-label">Accuracy</div>
+      </div>
+      <div class="game-stat">
+        <div class="game-stat-value" id="stat-progress">0%</div>
+        <div class="game-stat-label">Progress</div>
+      </div>
+    </div>
+    <div class="round-badge" id="game-round-badge">Round 1</div>
+    <div class="game-stat-group">
+      <div class="game-stat">
+        <div class="game-stat-value" id="stat-survivors">—</div>
+        <div class="game-stat-label">Survivors</div>
+      </div>
+      <div class="game-stat">
+        <div class="game-stat-value" id="stat-rank">#—</div>
+        <div class="game-stat-label">Your Rank</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="game-body">
+    <div class="typing-area">
+      <div class="scenario-card" id="scenario-card">
+        <div class="scenario-label">Emergency Scenario</div>
+        <div class="scenario-text" id="scenario-text">Loading scenario...</div>
+      </div>
+
+      <div class="passage-display" id="passage-display">
+        <!-- chars rendered here -->
+      </div>
+
+      <div class="input-area">
+        <input
+          type="text"
+          class="typing-input"
+          id="typing-input"
+          placeholder="Begin typing the passage above..."
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+          spellcheck="false"
+        >
+      </div>
+    </div>
+
+    <div class="live-sidebar">
+      <div class="section-label">Live Leaderboard</div>
+      <div id="live-leaderboard"></div>
+      <div class="danger-zone" id="danger-zone" style="display:none;">
+        ⚠ Elimination Zone — Speed Up!
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ ROUND OVER SCREEN ══════════════════════════════════ -->
+<div id="screen-roundover" class="screen">
+  <div class="roundover-inner">
+    <h2 class="roundover-title">Round Over</h2>
+    <p class="roundover-subtitle" id="roundover-subtitle">2 responders eliminated</p>
+
+    <div class="fact-card" id="fact-card">
+      <div class="fact-tag">First Aid Fact</div>
+      <div class="fact-text" id="fact-text"></div>
+    </div>
+
+    <div class="results-list" id="results-list"></div>
+
+    <div class="roundover-actions">
+      <button class="btn-primary" id="next-round-btn" onclick="nextRound()" style="display:none;">
+        Start Next Round
+      </button>
+      <button class="btn-secondary" onclick="goToLobby()">Back to Lobby</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FINAL SCREEN ══════════════════════════════════ -->
+<div id="screen-final" class="screen">
+  <div class="final-inner">
+    <div class="final-pulse"><div class="final-cross"></div></div>
+    <div class="final-winner-label">Last Responder Standing</div>
+    <div class="final-winner-name" id="final-winner-name">—</div>
+    <div class="final-winner-sub" id="final-winner-sub">First Aid Champion · Keep your skills sharp!</div>
+    <div class="final-stats">
+      <div class="final-stat-box">
+        <div class="final-stat-val" id="final-wpm">—</div>
+        <div class="final-stat-lbl">Best WPM</div>
+      </div>
+      <div class="final-stat-box">
+        <div class="final-stat-val" id="final-rounds">—</div>
+        <div class="final-stat-lbl">Rounds Won</div>
+      </div>
+      <div class="final-stat-box">
+        <div class="final-stat-val" id="final-acc">—</div>
+        <div class="final-stat-lbl">Accuracy</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+      <button class="btn-primary" style="max-width:220px;" onclick="resetGame()">Play Again</button>
+      <button class="btn-secondary" onclick="resetGame()">Return to Lobby</button>
+    </div>
+    <p style="font-size:0.75rem;color:#333;margin-top:2rem;line-height:1.5;">Remember: Call 9-1-1 in a real emergency. CPR training saves lives.</p>
+  </div>
+</div>
+
+<!-- ══ TEACHER FLOATING PANEL ══════════════════════════════════ -->
+<div class="teacher-panel" id="teacher-panel">
+  <div class="teacher-drawer" id="teacher-drawer">
+    <div class="teacher-drawer-title">Instructor Controls</div>
+    <button class="teacher-btn" id="teacher-start-round-btn" onclick="teacherStartRound()">▶ Start Round</button>
+    <button class="teacher-btn" id="teacher-next-round-btn" onclick="nextRound()" style="display:none;">▶ Next Round</button>
+    <button class="teacher-btn danger" onclick="endGame()">■ End Game</button>
+    <div style="margin-top:0.75rem;font-size:0.7rem;color:#333;letter-spacing:0.1em;">Room: <span id="teacher-room-display">—</span></div>
+  </div>
+  <button class="teacher-toggle" onclick="toggleTeacherDrawer()">T</button>
+</div>
+
+<!-- ══ WAITING OVERLAY ══════════════════════════════════ -->
+<div class="waiting-overlay" id="waiting-overlay">
+  <div class="waiting-box">
+    <span class="waiting-icon">🫁</span>
+    <div class="waiting-title">Eliminated</div>
+    <div class="waiting-msg" id="waiting-msg">You've been eliminated this round. Watch the remaining responders — learn from their speed and accuracy!</div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+//  DATA — Passage Sets & Scenarios
+// ═══════════════════════════════════════════
+
+const PASSAGE_SETS = [
+  {
+    id: 'check-call-care',
+    name: 'Check · Call · Care',
+    desc: 'Core Red Cross first aid steps',
+    passages: [
+      {
+        scenario: 'You find a coworker collapsed in the break room. No one else is around. You must act fast.',
+        text: 'Check the scene to make sure it is safe before approaching the victim. Tap the person on the shoulder and shout, are you okay? If there is no response, call nine one one immediately or tell someone nearby to call for help.',
+        fact: 'The first step — CHECK — means making sure the scene is safe before you rush in. Rushing into a dangerous scene can make two victims instead of one.'
+      },
+      {
+        scenario: 'A child has fallen at the playground and is not moving. Bystanders are watching.',
+        text: 'Shout for help and have someone call nine one one right away. Send a specific person to make the call and tell them to come back and confirm. If you are alone with the child, call nine one one yourself before starting any first aid care.',
+        fact: 'Pointing at a specific person and saying "You in the red shirt, call 9-1-1 now" is much more effective than just yelling for help. This prevents bystander effect.'
+      },
+      {
+        scenario: 'An elderly man at the mall has collapsed. He is unconscious and not breathing normally.',
+        text: 'Place the heel of your hand on the center of the chest between the nipples. Push down hard and fast at least two inches deep. Give thirty chest compressions, then two rescue breaths. Continue until help arrives or the person begins to breathe.',
+        fact: 'Hands-Only CPR — just chest compressions without rescue breaths — is highly effective for adults who collapse suddenly and is recommended for untrained bystanders.'
+      },
+      {
+        scenario: 'Your friend cuts their hand deeply while cooking. The bleeding is heavy and not stopping.',
+        text: 'Put on gloves if available to protect yourself from blood. Apply firm direct pressure to the wound using a clean cloth or bandage. Hold pressure continuously for at least ten minutes. Do not lift the cloth to check the wound. Call nine one one if bleeding is severe or does not stop.',
+        fact: 'Continuous pressure is key to stopping bleeding. Lifting the cloth too soon can disrupt the clot forming and restart bleeding.'
+      },
+      {
+        scenario: 'A swimmer is pulled unconscious from the pool. Lifeguards are performing CPR.',
+        text: 'An automated external defibrillator, or AED, can restart a heart in cardiac arrest. Turn it on and follow the voice instructions. Attach the pads to the bare chest as shown on the diagram. Stand clear when the machine delivers a shock. Resume CPR immediately after each shock.',
+        fact: 'Using an AED within the first 3-5 minutes of cardiac arrest can increase survival rates from less than 5% to over 70%.'
+      },
+    ]
+  },
+  {
+    id: 'cpr-aed',
+    name: 'CPR & AED',
+    desc: 'Cardiac arrest & defibrillation',
+    passages: [
+      {
+        scenario: 'A man in a restaurant suddenly grabs his chest and slumps to the floor. He is unresponsive.',
+        text: 'Check the person for responsiveness. If they do not respond, yell for help and call nine one one. Look for a nearby automated external defibrillator. Begin CPR immediately by pushing hard and fast on the center of the chest. Do not stop until the AED is ready or emergency help arrives.',
+        fact: 'For every minute CPR is delayed after cardiac arrest, the chance of survival decreases by about 7-10%.'
+      },
+      {
+        scenario: 'You are alone with a toddler who has stopped breathing. You have basic first aid training.',
+        text: 'For an infant or small child, use two fingers to compress the chest rather than the heel of your hand. Push down about one and a half inches at a rate of one hundred to one hundred twenty compressions per minute. Give two gentle puffs of air to make the chest rise. Call nine one one as soon as possible.',
+        fact: 'Pediatric CPR uses smaller hand placement and less compression depth than adult CPR to protect the child\'s smaller body.'
+      },
+      {
+        scenario: 'A coworker collapses after reporting chest pain. The office has an AED on the wall nearby.',
+        text: 'Send someone to grab the AED and call nine one one while you begin chest compressions. When the AED arrives, turn it on and peel the backing from the pads. Apply one pad below the right collarbone and one to the lower left side of the chest. Let the AED analyze the heart rhythm before delivering a shock.',
+        fact: 'AEDs are designed so that anyone can use them — the device will not shock a person who does not need it.'
+      },
+      {
+        scenario: 'A teenage athlete collapses on the field. Coaches are calling for help. You have training.',
+        text: 'Cardiac arrest in young athletes is rare but does happen. Act immediately. Call nine one one, start CPR, and locate the nearest AED. Push down at least two inches and allow full chest recoil between compressions. Do not interrupt compressions for more than ten seconds. Continue until the AED is available.',
+        fact: 'Commotio cordis — cardiac arrest caused by a blow to the chest — is one of the leading causes of sudden death in young athletes.'
+      },
+      {
+        scenario: 'A person with a pacemaker has collapsed. You see the bump under their skin on the left chest.',
+        text: 'You can still use an AED on a person with a pacemaker or implanted defibrillator. Avoid placing the pad directly over the device bump. Move the pad at least one inch away from the implant. CPR and AED use can still save their life. Do not hesitate to act because of the device.',
+        fact: 'Pacemakers and implanted defibrillators will not prevent AED use — safety guidelines simply require slight pad repositioning.'
+      }
+    ]
+  },
+  {
+    id: 'bleeding-shock',
+    name: 'Bleeding & Shock',
+    desc: 'Hemorrhage control & shock response',
+    passages: [
+      {
+        scenario: 'A construction worker cuts their arm deeply on a piece of metal. Blood is soaking through their sleeve.',
+        text: 'Protect yourself by wearing gloves if available. Apply direct pressure to the wound with a clean cloth and press firmly. If the cloth soaks through, add more material on top and continue pressing. Do not remove the original cloth as this can disrupt the clot that is forming. Elevate the injured limb above the heart if possible.',
+        fact: 'Adding more cloth on top without removing the soaked material is called reinforcing the dressing — this technique is critical to maintaining clot formation.'
+      },
+      {
+        scenario: 'A hiker has a deep leg wound from a fall. The bleeding is severe and not slowing down.',
+        text: 'If direct pressure is not controlling a limb bleed, apply a tourniquet two to three inches above the wound. Tighten until bleeding stops. Note the time the tourniquet was applied. Do not remove it. Inform emergency responders immediately when they arrive about the time of application.',
+        fact: 'Modern research shows that tourniquets are safe for up to two hours and are life-saving tools when used appropriately on severe limb bleeding.'
+      },
+      {
+        scenario: 'A car crash victim is pale, confused, and breathing fast. They have visible injuries.',
+        text: 'These signs suggest the person may be going into shock. Lay them flat on their back and elevate their legs about twelve inches if there are no spinal injuries. Keep them warm with a blanket. Do not give them food or water. Call nine one one immediately. Stay with them and monitor their breathing until help arrives.',
+        fact: 'Shock is a life-threatening condition where the body\'s organs are not receiving enough blood flow. Early recognition and keeping the person calm and warm are critical.'
+      },
+      {
+        scenario: 'A child has a nosebleed that has lasted more than 10 minutes and is not stopping.',
+        text: 'Have the child sit upright and lean slightly forward, not backward. Pinch the soft part of the nose just below the bony ridge. Hold firm pressure for a full ten minutes without releasing. Breathe through the mouth. If the bleeding continues after twenty minutes or follows a head injury, call nine one one.',
+        fact: 'Leaning forward during a nosebleed prevents blood from flowing into the throat, which can cause nausea or vomiting and obscure the airway.'
+      },
+      {
+        scenario: 'Someone is vomiting blood after a sports injury to the abdomen.',
+        text: 'Call nine one one right away for any internal bleeding emergency. Do not give the person anything to eat or drink. Help them stay calm and lie still in a position of comfort. Loosen tight clothing. Monitor their breathing and level of consciousness. Be prepared to perform CPR if they stop breathing.',
+        fact: 'Vomiting blood is a serious warning sign of internal bleeding and requires immediate emergency medical care — first aid cannot treat internal injuries.'
+      }
+    ]
+  },
+  {
+    id: 'choking-airway',
+    name: 'Choking & Airway',
+    desc: 'Airway obstruction response',
+    passages: [
+      {
+        scenario: 'A child at lunch is coughing forcefully but cannot speak or cry. Their face is turning red.',
+        text: 'If a person is coughing forcefully, encourage them to keep coughing as this is the most effective way to clear an obstruction. Do not slap their back or interfere. Stand nearby and watch closely. If the coughing stops and they cannot breathe, speak, or cry, act immediately with abdominal thrusts.',
+        fact: 'A forceful cough generates more airway pressure than abdominal thrusts and should always be the first approach when the person can still cough.'
+      },
+      {
+        scenario: 'An adult diner grabs their throat with both hands and cannot speak or breathe. Their lips are turning blue.',
+        text: 'Stand behind the person and lean them slightly forward. Give up to five sharp back blows between the shoulder blades using the heel of your hand. Then give up to five abdominal thrusts by placing your fist just above the navel. Alternate back blows and abdominal thrusts until the object is dislodged or the person becomes unconscious.',
+        fact: 'The universal sign of choking — hands gripped around the throat — is recognized worldwide. Always ask "Are you choking?" before intervening to confirm.'
+      },
+      {
+        scenario: 'A pregnant woman in her third trimester is choking on food at a family dinner.',
+        text: 'For a pregnant or obese person, do not perform abdominal thrusts. Instead, use chest thrusts. Stand behind them, place your arms under their armpits, and position your fist on the center of the sternum. Give firm backward thrusts until the object is cleared. If they become unconscious, lower them to the floor and begin CPR.',
+        fact: 'Abdominal thrusts are not safe for pregnant individuals because pressure on the uterus can harm the baby — chest thrusts are the correct modification.'
+      },
+      {
+        scenario: 'A toddler is found silent and turning blue. A small toy part is suspected to be in their throat.',
+        text: 'For an infant under one year, hold the baby face down on your forearm with the head lower than the chest. Give five firm back blows between the shoulder blades. Turn the baby face up and give five chest thrusts using two fingers on the center of the chest. Repeat until the object is removed or the infant becomes unresponsive.',
+        fact: 'Blind finger sweeps should never be performed on infants or children — this can accidentally push the object deeper into the airway.'
+      },
+      {
+        scenario: 'You are alone and begin to choke on food. No one is around to help you.',
+        text: 'If you are alone and choking, try to cough forcefully to dislodge the object. If that fails, make a fist and thrust it into your own upper abdomen in a quick upward motion. You can also lean forward and thrust your upper abdomen against a hard edge such as the back of a chair or a countertop to create the force needed.',
+        fact: 'Self-administered abdominal thrusts against a firm surface like a chair back can generate enough force to dislodge a stuck object when you are alone.'
+      }
+    ]
+  },
+  {
+    id: 'burns-fractures',
+    name: 'Burns & Fractures',
+    desc: 'Injury & musculoskeletal care',
+    passages: [
+      {
+        scenario: 'A cook spills boiling water on their forearm. The skin is red and blistering.',
+        text: 'Cool the burn immediately by running cool water over it for at least ten minutes. Do not use ice, butter, or toothpaste as these can make the injury worse. Do not pop any blisters that form. Cover the area loosely with a clean non-stick bandage. Seek medical attention for burns larger than three inches or those on the face, hands, or joints.',
+        fact: 'Running cool (not cold) water over a burn for at least 10 minutes is the single most effective first aid treatment — it reduces pain, limits tissue damage, and decreases the depth of injury.'
+      },
+      {
+        scenario: 'A skateboarder has fallen and their arm is bent at an unnatural angle. They are in severe pain.',
+        text: 'Do not try to straighten or realign a suspected broken bone. Immobilize the injury in the position you find it. Apply a splint using padded rigid material on either side of the fracture. Secure the splint above and below the injury. Elevate the limb if possible and apply ice wrapped in cloth to reduce swelling. Call nine one one or take them to an emergency room.',
+        fact: 'Moving a fractured bone without proper support can cause additional tissue, nerve, and blood vessel damage — always immobilize before moving the injured person.'
+      },
+      {
+        scenario: 'A child has spilled hot soup on their chest. The area is bright red and the child is screaming.',
+        text: 'Remove any clothing or jewelry from the burned area unless it is stuck to the skin. Run cool water over the burn for a full ten minutes. Reassure the child and keep them warm to prevent shock from setting in. Do not apply any home remedies to the burn. Cover loosely and seek emergency medical care right away for burns in children.',
+        fact: 'Children\'s skin is thinner than adults\', making burns more severe at lower temperatures — any significant burn in a child requires emergency evaluation.'
+      },
+      {
+        scenario: 'A runner twists their ankle on a trail and cannot bear weight on it. The ankle is swelling quickly.',
+        text: 'Use the RICE method for a sprain. Rest the injured ankle and avoid putting weight on it. Apply Ice wrapped in a cloth for twenty minutes at a time to reduce swelling. Compress the area with an elastic bandage to limit swelling. Elevate the ankle above the level of the heart when resting. Seek medical evaluation if pain is severe or if the person cannot walk.',
+        fact: 'The RICE method — Rest, Ice, Compression, Elevation — is the gold standard first aid treatment for soft tissue injuries like sprains and strains.'
+      },
+      {
+        scenario: 'A kitchen fire has burned someone\'s hand. Their skin is white and leathery in the center.',
+        text: 'White, brown, or blackened skin with little or no pain may indicate a severe third degree burn. Call nine one one immediately. Do not immerse the area in water or apply anything to the wound. Cover the burned area loosely with a dry clean bandage or sheet. Keep the person warm and treat for shock. This is a medical emergency.',
+        fact: 'Third-degree burns destroy nerve endings, which is why they may feel less painful than minor burns — but they are the most dangerous and always require emergency care.'
+      }
+    ]
+  }
+];
+
+const AVATAR_COLORS = [
+  { bg: '#922B21', text: '#FADBD8' },
+  { bg: '#1A5276', text: '#D6EAF8' },
+  { bg: '#145A32', text: '#D5F5E3' },
+  { bg: '#6E2FBE', text: '#E8DAFF' },
+  { bg: '#7E5109', text: '#FAD7A0' },
+  { bg: '#1A535C', text: '#D0EEF2' },
+  { bg: '#4A235A', text: '#E8DAEF' },
+  { bg: '#78281F', text: '#FADBD8' },
+];
+
+// ═══════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════
+
+const TEACHER_PIN = '1234';
+const bc = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('respond_game') : null;
+
+let state = {
+  isTeacher: false,
+  myName: '',
+  myPeriod: '',
+  roomCode: '',
+  round: 1,
+  players: {},       // { name: { wpm, acc, progress, chars, eliminated, period } }
+  elimPerRound: 1,
+  passageSetId: 'check-call-care',
+  usedPassageIndices: {},  // { setId: [used indices] }
+  currentPassage: null,
+  currentScenario: null,
+  gamePhase: 'lobby', // lobby | countdown | playing | roundover | final
+  teacherDrawerOpen: false,
+};
+
+// Typing state
+let typingState = {
+  startTime: null,
+  chars: 0,
+  errors: 0,
+  totalTyped: 0,
+  wpmInterval: null,
+  finished: false,
+};
+
+// ═══════════════════════════════════════════
+//  BROADCAST / SYNC (same-device demo mode)
+//  In a real deploy, replace with Firebase/Supabase
+// ═══════════════════════════════════════════
+
+function broadcast(msg) {
+  if (bc) bc.postMessage(msg);
+  // Also handle locally for single-device testing
+  handleMessage(msg, true);
+}
+
+function handleMessage(msg, local = false) {
+  if (local && !state.isTeacher && msg.type !== 'PLAYER_UPDATE') return;
+
+  switch(msg.type) {
+    case 'ROOM_STATE':
+      if (!state.isTeacher) {
+        state.players = msg.players;
+        state.round = msg.round;
+        state.elimPerRound = msg.elimPerRound;
+        state.passageSetId = msg.passageSetId;
+        renderLobbyPlayers();
+      }
+      break;
+    case 'START_ROUND':
+      if (!state.isTeacher) {
+        state.currentPassage = msg.passage;
+        state.currentScenario = msg.scenario;
+        state.round = msg.round;
+        beginCountdown();
+      }
+      break;
+    case 'PLAYER_UPDATE':
+      state.players[msg.name] = { ...state.players[msg.name], ...msg.data };
+      if (state.gamePhase === 'playing') renderLiveLeaderboard();
+      if (state.gamePhase === 'lobby') renderLobbyPlayers();
+      break;
+    case 'ROUND_OVER':
+      if (!state.isTeacher) {
+        state.players = msg.players;
+        showRoundOver(msg.eliminated, msg.isFinal, msg.winnerName);
+      }
+      break;
+    case 'NEXT_ROUND':
+      if (!state.isTeacher) {
+        state.round = msg.round;
+        state.currentPassage = msg.passage;
+        state.currentScenario = msg.scenario;
+        beginCountdown();
+      }
+      break;
+    case 'GAME_RESET':
+      resetToLanding();
+      break;
+  }
+}
+
+if (bc) {
+  bc.onmessage = (e) => handleMessage(e.data, false);
+}
+
+// ═══════════════════════════════════════════
+//  SCREEN ROUTING
+// ═══════════════════════════════════════════
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  state.gamePhase = id === 'game' ? 'playing' : id;
+}
+
+// ═══════════════════════════════════════════
+//  LANDING → JOIN / CREATE
+// ═══════════════════════════════════════════
+
+function generateRoomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 4; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+function createRoom() {
+  const pin = document.getElementById('teacher-pin').value;
+  const name = document.getElementById('teacher-name').value.trim();
+  if (pin !== TEACHER_PIN) { showToast('Incorrect PIN', 'error'); return; }
+  if (!name) { showToast('Enter your name', 'error'); return; }
+
+  state.isTeacher = true;
+  state.myName = name;
+  state.roomCode = generateRoomCode();
+  state.round = 1;
+  state.players = {};
+  state.usedPassageIndices = {};
+
+  // Add teacher as observer player
+  state.players[name] = { wpm: 0, acc: 100, progress: 0, chars: 0, eliminated: false, period: 'Instructor', isTeacher: true };
+
+  setupPassageGrid();
+  goToLobby();
+  document.getElementById('teacher-panel').classList.add('show');
+  document.getElementById('teacher-room-display').textContent = state.roomCode;
+}
+
+function joinRoom() {
+  const name = document.getElementById('student-name').value.trim();
+  const period = document.getElementById('student-period').value;
+  const room = document.getElementById('student-room').value.trim().toUpperCase();
+
+  if (!name) { showToast('Enter your name', 'error'); return; }
+  if (!room) { showToast('Enter a room code', 'error'); return; }
+
+  state.isTeacher = false;
+  state.myName = name;
+  state.myPeriod = period;
+  state.roomCode = room;
+
+  // Register player
+  state.players[name] = { wpm: 0, acc: 100, progress: 0, chars: 0, eliminated: false, period };
+  broadcast({ type: 'PLAYER_UPDATE', name, data: state.players[name] });
+
+  goToLobby();
+}
+
+function goToLobby() {
+  state.gamePhase = 'lobby';
+  document.getElementById('lobby-room-display').textContent = state.roomCode;
+  document.getElementById('teacher-controls').style.display = state.isTeacher ? 'block' : 'none';
+  document.getElementById('student-waiting').style.display = state.isTeacher ? 'none' : 'block';
+  document.getElementById('teacher-start-round-btn').style.display = 'block';
+  document.getElementById('teacher-next-round-btn').style.display = 'none';
+  document.getElementById('waiting-overlay').classList.remove('show');
+
+  renderQuickReview();
+  renderLobbyPlayers();
+  showScreen('lobby');
+
+  // Check start button
+  checkStartButton();
+}
+
+function renderQuickReview() {
+  const container = document.getElementById('quick-review-cards');
+  if (!container) return;
+  const set = PASSAGE_SETS[0];
+  container.innerHTML = set.passages.slice(0, 3).map(p => `
+    <div style="background:#0D0D0D;border:1px solid #1A1A1A;border-radius:6px;padding:0.75rem 1rem;margin-bottom:0.5rem;">
+      <div style="font-size:0.72rem;color:var(--gray-mid);line-height:1.5;">${p.fact}</div>
+    </div>
+  `).join('');
+}
+
+function setupPassageGrid() {
+  const grid = document.getElementById('passage-grid');
+  grid.innerHTML = PASSAGE_SETS.map(set => `
+    <button class="passage-btn ${set.id === state.passageSetId ? 'selected' : ''}" onclick="selectPassageSet('${set.id}')">
+      <div class="passage-btn-name">${set.name}</div>
+      <div class="passage-btn-desc">${set.desc}</div>
+    </button>
+  `).join('');
+}
+
+function selectPassageSet(id) {
+  state.passageSetId = id;
+  document.querySelectorAll('.passage-btn').forEach(b => b.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+}
+
+function renderLobbyPlayers() {
+  const grid = document.getElementById('players-grid');
+  const count = Object.keys(state.players).length;
+  document.getElementById('player-count').textContent = count;
+
+  grid.innerHTML = Object.entries(state.players).map(([name, p], i) => {
+    const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+    const initials = name.slice(0, 2).toUpperCase();
+    return `
+      <div class="player-chip ${p.eliminated ? 'eliminated' : ''}">
+        <div class="player-avatar" style="background:${color.bg};color:${color.text};">${initials}</div>
+        <div class="player-info">
+          <div class="player-name">${name}</div>
+          <div class="player-wpm">${p.period || ''}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  checkStartButton();
+}
+
+function checkStartButton() {
+  const btn = document.getElementById('start-game-btn');
+  if (!btn) return;
+  const activePlayers = Object.values(state.players).filter(p => !p.eliminated && !p.isTeacher).length;
+  btn.disabled = activePlayers < 2;
+  btn.textContent = activePlayers < 2
+    ? `Waiting for players (${activePlayers}/2 minimum)...`
+    : `Start Round ${state.round} — Dispatch All Units`;
+}
+
+// ─── Elimination stepper ───
+let elimCount = 1;
+function adjustElim(delta) {
+  const activePlayers = Object.values(state.players).filter(p => !p.eliminated && !p.isTeacher).length;
+  elimCount = Math.max(1, Math.min(elimCount + delta, Math.max(1, activePlayers - 1)));
+  document.getElementById('elim-count').textContent = elimCount;
+  state.elimPerRound = elimCount;
+}
+
+// ═══════════════════════════════════════════
+//  GAME FLOW
+// ═══════════════════════════════════════════
+
+function pickPassage() {
+  const set = PASSAGE_SETS.find(s => s.id === state.passageSetId) || PASSAGE_SETS[0];
+  if (!state.usedPassageIndices[state.passageSetId]) state.usedPassageIndices[state.passageSetId] = [];
+  const used = state.usedPassageIndices[state.passageSetId];
+  let available = set.passages.map((_, i) => i).filter(i => !used.includes(i));
+  if (available.length === 0) { state.usedPassageIndices[state.passageSetId] = []; available = set.passages.map((_, i) => i); }
+  const idx = available[Math.floor(Math.random() * available.length)];
+  state.usedPassageIndices[state.passageSetId].push(idx);
+  return set.passages[idx];
+}
+
+function startGame() {
+  if (!state.isTeacher) return;
+  const passage = pickPassage();
+  state.currentPassage = passage.text;
+  state.currentScenario = passage.scenario;
+
+  // Reset all player progress
+  Object.keys(state.players).forEach(name => {
+    if (!state.players[name].isTeacher) {
+      state.players[name].wpm = 0;
+      state.players[name].acc = 100;
+      state.players[name].progress = 0;
+      state.players[name].chars = 0;
+      state.players[name].finished = false;
+    }
+  });
+
+  broadcast({ type: 'START_ROUND', passage: passage.text, scenario: passage.scenario, round: state.round });
+
+  // Teacher also enters game view
+  beginCountdown();
+}
+
+function teacherStartRound() {
+  if (state.gamePhase === 'lobby') {
+    startGame();
+  } else if (state.gamePhase === 'roundover') {
+    nextRound();
+  }
+  state.teacherDrawerOpen = false;
+  document.getElementById('teacher-drawer').classList.remove('open');
+}
+
+function beginCountdown() {
+  showScreen('countdown');
+  document.getElementById('countdown-round-label').textContent = `Round ${state.round}`;
+  document.getElementById('game-round-badge').textContent = `Round ${state.round}`;
+
+  let n = 3;
+  document.getElementById('countdown-number').textContent = n;
+  const iv = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(iv);
+      startTyping();
+    } else {
+      document.getElementById('countdown-number').textContent = n;
+    }
+  }, 1000);
+}
+
+function startTyping() {
+  showScreen('game');
+
+  const passage = state.currentPassage;
+  const scenario = state.currentScenario;
+
+  document.getElementById('scenario-text').innerHTML = scenario;
+  document.getElementById('stat-survivors').textContent = Object.values(state.players).filter(p => !p.eliminated && !p.isTeacher).length;
+
+  renderPassageDisplay(passage, 0, []);
+  renderLiveLeaderboard();
+
+  typingState = { startTime: null, chars: 0, errors: 0, totalTyped: 0, wpmInterval: null, finished: false };
+
+  const input = document.getElementById('typing-input');
+  input.value = '';
+  input.disabled = false;
+  input.focus();
+
+  // Check if this player is eliminated
+  const me = state.players[state.myName];
+  if (me && me.eliminated) {
+    input.disabled = true;
+    document.getElementById('waiting-overlay').classList.add('show');
+    document.getElementById('waiting-msg').textContent = 'You were eliminated in a previous round. Watch the survivors and learn!';
+    return;
+  }
+
+  input.addEventListener('input', onTypingInput);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Tab') e.preventDefault(); });
+}
+
+function renderPassageDisplay(passage, charsTyped, errorIndices) {
+  const display = document.getElementById('passage-display');
+  let html = '';
+  for (let i = 0; i < passage.length; i++) {
+    const ch = passage[i] === ' ' ? '&nbsp;' : passage[i];
+    if (i < charsTyped) {
+      if (errorIndices.includes(i)) {
+        html += `<span class="char-error">${ch}</span>`;
+      } else {
+        html += `<span class="char-correct">${ch}</span>`;
+      }
+    } else if (i === charsTyped) {
+      html += `<span class="char-cursor"></span><span class="char-pending">${ch}</span>`;
+    } else {
+      html += `<span class="char-pending">${ch}</span>`;
+    }
+  }
+  if (charsTyped >= passage.length) html += `<span class="char-cursor"></span>`;
+  display.innerHTML = html;
+}
+
+let errorIndices = [];
+
+function onTypingInput(e) {
+  const input = e.target;
+  const passage = state.currentPassage;
+  const typed = input.value;
+
+  if (!typingState.startTime && typed.length > 0) {
+    typingState.startTime = Date.now();
+    typingState.wpmInterval = setInterval(updateStats, 500);
+  }
+
+  // Validate current typed text
+  errorIndices = [];
+  let correctChars = 0;
+  for (let i = 0; i < typed.length; i++) {
+    if (typed[i] === passage[i]) {
+      correctChars++;
+    } else {
+      errorIndices.push(i);
+    }
+  }
+
+  typingState.chars = typed.length;
+  typingState.errors = errorIndices.length;
+  typingState.totalTyped = Math.max(typingState.totalTyped, typed.length);
+
+  if (errorIndices.length > 0) {
+    input.classList.add('error');
+    setTimeout(() => input.classList.remove('error'), 300);
+  }
+
+  renderPassageDisplay(passage, typed.length, errorIndices);
+  updateStats();
+
+  // Check completion
+  if (typed === passage && !typingState.finished) {
+    typingState.finished = true;
+    input.disabled = true;
+    clearInterval(typingState.wpmInterval);
+    updateStats(true);
+    broadcastMyProgress(true);
+    showToast('Passage complete! Awaiting other responders...', 'success');
+    // Teacher checks if all finished
+    if (state.isTeacher) checkRoundComplete();
+  } else {
+    broadcastMyProgress(false);
+  }
+}
+
+function updateStats(final = false) {
+  if (!typingState.startTime) return;
+  const elapsed = (Date.now() - typingState.startTime) / 1000 / 60;
+  const passage = state.currentPassage;
+  const wordCount = passage.trim().split(/\s+/).length;
+  const progress = Math.min(100, Math.round((typingState.chars / passage.length) * 100));
+  const wpm = elapsed > 0 ? Math.round((typingState.chars / 5) / elapsed) : 0;
+  const acc = typingState.totalTyped > 0
+    ? Math.round(((typingState.totalTyped - typingState.errors) / typingState.totalTyped) * 100)
+    : 100;
+
+  document.getElementById('stat-wpm').textContent = wpm;
+  document.getElementById('stat-acc').textContent = acc + '%';
+  document.getElementById('stat-progress').textContent = progress + '%';
+
+  // Update my player data
+  state.players[state.myName] = {
+    ...state.players[state.myName],
+    wpm, acc, progress, chars: typingState.chars, finished: typingState.finished
+  };
+
+  renderLiveLeaderboard();
+
+  if (state.isTeacher && typingState.finished) checkRoundComplete();
+}
+
+function broadcastMyProgress(finished) {
+  const me = state.players[state.myName];
+  if (me) broadcast({ type: 'PLAYER_UPDATE', name: state.myName, data: me });
+}
+
+function renderLiveLeaderboard() {
+  const sidebar = document.getElementById('live-leaderboard');
+  const activePlayers = Object.entries(state.players)
+    .filter(([, p]) => !p.isTeacher)
+    .sort((a, b) => (b[1].progress || 0) - (a[1].progress || 0) || (b[1].wpm || 0) - (a[1].wpm || 0));
+
+  const bottomN = state.elimPerRound;
+  sidebar.innerHTML = activePlayers.map(([name, p], idx) => {
+    const inDanger = !p.eliminated && idx >= (activePlayers.length - bottomN) && activePlayers.length > bottomN;
+    const fillClass = p.eliminated ? '' : (inDanger ? 'danger' : 'safe');
+    return `
+      <div class="live-player-row ${p.eliminated ? 'eliminated' : ''}">
+        <div class="live-rank">${idx + 1}</div>
+        <div style="flex:1;">
+          <div class="live-player-name-small">${name}${name === state.myName ? ' ★' : ''}</div>
+          <div class="live-bar-wrap">
+            <div class="live-bar-fill ${fillClass}" style="width:${p.progress || 0}%"></div>
+          </div>
+        </div>
+        <div class="live-wpm-small">${p.wpm || 0} wpm</div>
+      </div>
+    `;
+  }).join('');
+
+  const dangerZone = document.getElementById('danger-zone');
+  const myRank = activePlayers.findIndex(([n]) => n === state.myName);
+  const inDanger = myRank >= activePlayers.length - bottomN && activePlayers.length > bottomN && !state.players[state.myName]?.eliminated;
+  dangerZone.style.display = inDanger ? 'flex' : 'none';
+
+  document.getElementById('stat-rank').textContent = '#' + (myRank + 1);
+  document.getElementById('stat-survivors').textContent = activePlayers.filter(([,p]) => !p.eliminated).length;
+}
+
+// ─── Round completion ───
+
+let roundCompleteTimer = null;
+
+function checkRoundComplete() {
+  if (!state.isTeacher) return;
+  const activePlayers = Object.values(state.players).filter(p => !p.eliminated && !p.isTeacher);
+  const allDone = activePlayers.every(p => p.finished);
+  if (allDone || (roundCompleteTimer === null)) {
+    if (roundCompleteTimer) clearTimeout(roundCompleteTimer);
+    roundCompleteTimer = setTimeout(doRoundOver, allDone ? 1000 : 45000);
+  }
+}
+
+function doRoundOver() {
+  if (!state.isTeacher) return;
+  roundCompleteTimer = null;
+
+  const activePlayers = Object.entries(state.players)
+    .filter(([, p]) => !p.eliminated && !p.isTeacher)
+    .sort((a, b) => (b[1].wpm || 0) - (a[1].wpm || 0) || (b[1].progress || 0) - (a[1].progress || 0));
+
+  // Eliminate bottom N
+  const toEliminate = activePlayers.slice(-Math.min(state.elimPerRound, activePlayers.length - 1)).map(([n]) => n);
+  toEliminate.forEach(name => { state.players[name].eliminated = true; });
+
+  const remaining = activePlayers.filter(([n]) => !toEliminate.includes(n));
+  const isFinal = remaining.length <= 1;
+  const winnerName = isFinal ? (remaining[0]?.[0] || activePlayers[0]?.[0]) : null;
+
+  broadcast({ type: 'ROUND_OVER', players: state.players, eliminated: toEliminate, isFinal, winnerName });
+  showRoundOver(toEliminate, isFinal, winnerName);
+}
+
+function showRoundOver(eliminated, isFinal, winnerName) {
+  state.gamePhase = 'roundover';
+  showScreen('roundover');
+  document.getElementById('waiting-overlay').classList.remove('show');
+
+  document.getElementById('roundover-subtitle').textContent =
+    eliminated.length === 1 ? '1 responder eliminated' : `${eliminated.length} responders eliminated`;
+
+  // Fact from current passage set
+  const set = PASSAGE_SETS.find(s => s.id === state.passageSetId) || PASSAGE_SETS[0];
+  const facts = set.passages.map(p => p.fact);
+  const fact = facts[Math.floor(Math.random() * facts.length)];
+  document.getElementById('fact-text').innerHTML = fact.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+  // Results
+  const allPlayers = Object.entries(state.players)
+    .filter(([, p]) => !p.isTeacher)
+    .sort((a, b) => (b[1].wpm || 0) - (a[1].wpm || 0));
+
+  const list = document.getElementById('results-list');
+  list.innerHTML = allPlayers.map(([name, p], idx) => {
+    const isElim = eliminated.includes(name);
+    const delay = idx * 0.08;
+    return `
+      <div class="result-row ${isElim ? 'eliminated-row' : ''}" style="animation-delay:${delay}s">
+        <div class="result-rank-num ${idx === 0 ? 'gold' : ''}">${idx + 1}</div>
+        <div class="result-player-name">${name}${name === state.myName ? ' ★' : ''}</div>
+        <div>
+          <div class="result-wpm">${p.wpm || 0}</div>
+          <div class="result-wpm-label">WPM</div>
+        </div>
+        <div class="result-badge ${isElim ? 'badge-elim' : 'badge-safe'}">${isElim ? 'Eliminated' : 'Safe'}</div>
+      </div>
+    `;
+  }).join('');
+
+  if (isFinal) {
+    setTimeout(() => showFinal(winnerName), 2500);
+  } else {
+    const btn = document.getElementById('next-round-btn');
+    btn.style.display = state.isTeacher ? 'block' : 'none';
+    document.getElementById('teacher-start-round-btn').style.display = 'none';
+    document.getElementById('teacher-next-round-btn').style.display = 'block';
+  }
+}
+
+function nextRound() {
+  if (!state.isTeacher) return;
+  state.round++;
+
+  // Reset progress for non-eliminated
+  Object.keys(state.players).forEach(name => {
+    if (!state.players[name].eliminated && !state.players[name].isTeacher) {
+      state.players[name].wpm = 0;
+      state.players[name].acc = 100;
+      state.players[name].progress = 0;
+      state.players[name].chars = 0;
+      state.players[name].finished = false;
+    }
+  });
+
+  const passage = pickPassage();
+  state.currentPassage = passage.text;
+  state.currentScenario = passage.scenario;
+
+  document.getElementById('teacher-start-round-btn').style.display = 'block';
+  document.getElementById('teacher-next-round-btn').style.display = 'none';
+
+  broadcast({ type: 'NEXT_ROUND', round: state.round, passage: passage.text, scenario: passage.scenario });
+  beginCountdown();
+}
+
+function showFinal(winnerName) {
+  showScreen('final');
+  document.getElementById('final-winner-name').textContent = winnerName || '—';
+  const winner = state.players[winnerName] || {};
+  document.getElementById('final-wpm').textContent = winner.wpm || '—';
+  document.getElementById('final-rounds').textContent = state.round;
+  document.getElementById('final-acc').textContent = (winner.acc || 100) + '%';
+  document.getElementById('final-winner-sub').textContent =
+    winnerName === state.myName
+      ? 'You are the last responder standing! Great typing speed AND first aid knowledge!'
+      : `${winnerName} survived the triage zone. Stay sharp and keep practicing!`;
+}
+
+function endGame() {
+  broadcast({ type: 'GAME_RESET' });
+  resetToLanding();
+}
+
+function resetGame() {
+  resetToLanding();
+}
+
+function resetToLanding() {
+  state = {
+    isTeacher: false, myName: '', myPeriod: '', roomCode: '', round: 1,
+    players: {}, elimPerRound: 1, passageSetId: 'check-call-care',
+    usedPassageIndices: {}, currentPassage: null, currentScenario: null,
+    gamePhase: 'lobby', teacherDrawerOpen: false,
+  };
+  typingState = { startTime: null, chars: 0, errors: 0, totalTyped: 0, wpmInterval: null, finished: false };
+  errorIndices = [];
+  document.getElementById('teacher-panel').classList.remove('show');
+  document.getElementById('waiting-overlay').classList.remove('show');
+
+  const input = document.getElementById('typing-input');
+  if (input) { input.removeEventListener('input', onTypingInput); input.value = ''; }
+
+  showScreen('landing');
+}
+
+// ═══════════════════════════════════════════
+//  TEACHER PANEL
+// ═══════════════════════════════════════════
+
+function toggleTeacherDrawer() {
+  state.teacherDrawerOpen = !state.teacherDrawerOpen;
+  document.getElementById('teacher-drawer').classList.toggle('open', state.teacherDrawerOpen);
+}
+
+// ═══════════════════════════════════════════
+//  SINGLE PLAYER MODE (for demo / solo)
+// ═══════════════════════════════════════════
+
+// If teacher clicks "Start" without other players, add a few AI-bots
+function addBotPlayers() {
+  const bots = ['Unit Alpha', 'Unit Bravo', 'Unit Delta'];
+  bots.forEach(bot => {
+    if (!state.players[bot]) {
+      state.players[bot] = { wpm: 0, acc: 100, progress: 0, chars: 0, eliminated: false, period: 'Bot', isBot: true };
+    }
+  });
+  renderLobbyPlayers();
+  simulateBots();
+}
+
+function simulateBots() {
+  if (state.gamePhase !== 'playing') return;
+  const botSpeeds = { 'Unit Alpha': 55, 'Unit Bravo': 38, 'Unit Delta': 70 };
+  Object.entries(botSpeeds).forEach(([bot, wpm]) => {
+    if (!state.players[bot] || state.players[bot].eliminated) return;
+    const passage = state.currentPassage;
+    const totalTime = (passage.split(' ').length / wpm) * 60 * 1000;
+    const startTime = Date.now();
+    const iv = setInterval(() => {
+      if (state.gamePhase !== 'playing') { clearInterval(iv); return; }
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, Math.round((elapsed / totalTime) * 100));
+      state.players[bot] = { ...state.players[bot], progress, wpm: wpm + Math.floor(Math.random() * 5 - 2), finished: progress >= 100 };
+      renderLiveLeaderboard();
+      if (progress >= 100) { clearInterval(iv); if (state.isTeacher) checkRoundComplete(); }
+    }, 500);
+  });
+}
+
+// Override startGame to add bots if only 1 real player
+const _origStartGame = startGame;
+window.startGame = function() {
+  const realPlayers = Object.values(state.players).filter(p => !p.eliminated && !p.isTeacher && !p.isBot).length;
+  if (realPlayers < 2) addBotPlayers();
+  _origStartGame();
+  setTimeout(() => { if (state.gamePhase === 'playing') simulateBots(); }, 3500);
+};
+
+// Start round timer (45s timeout for teacher)
+function startRoundTimer() {
+  clearTimeout(roundCompleteTimer);
+  roundCompleteTimer = setTimeout(() => { if (state.isTeacher && state.gamePhase === 'playing') doRoundOver(); }, 120000);
+}
+
+const _origBeginCountdown = beginCountdown;
+window.beginCountdown = function() {
+  _origBeginCountdown();
+  if (state.isTeacher) setTimeout(startRoundTimer, 3500);
+};
+
+// ═══════════════════════════════════════════
+//  TOAST
+// ═══════════════════════════════════════════
+
+function showToast(msg, type = '') {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
+
+// ═══════════════════════════════════════════
+//  SOLO MODE
+// ═══════════════════════════════════════════
+
+let soloState = {
+  name: '',
+  setId: 'check-call-care',
+  passagesPerSession: 5,
+  currentPassageIdx: 0,
+  usedIndices: [],
+  results: [],            // { wpm, acc, words }
+  startTime: null,
+  errors: 0,
+  totalTyped: 0,
+  finished: false,
+  wpmInterval: null,
+  errorIndices: [],
+};
+
+function initSoloSetGrid() {
+  const grid = document.getElementById('solo-set-grid');
+  if (!grid) return;
+  grid.innerHTML = PASSAGE_SETS.map(set => `
+    <button class="solo-set-btn ${set.id === soloState.setId ? 'selected' : ''}"
+      onclick="selectSoloSet('${set.id}', this)">
+      <div class="solo-set-btn-name">${set.name}</div>
+      <div class="solo-set-btn-desc">${set.desc}</div>
+    </button>
+  `).join('');
+}
+
+function selectSoloSet(id, el) {
+  soloState.setId = id;
+  document.querySelectorAll('.solo-set-btn').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function startSolo() {
+  const name = document.getElementById('solo-name').value.trim();
+  if (!name) { showToast('Enter your name to start', 'error'); return; }
+  soloState.name = name;
+  soloState.usedIndices = [];
+  soloState.results = [];
+  soloState.currentPassageIdx = 0;
+  loadNextSoloPassage();
+}
+
+function loadNextSoloPassage() {
+  const set = PASSAGE_SETS.find(s => s.id === soloState.setId) || PASSAGE_SETS[0];
+  let available = set.passages.map((_, i) => i).filter(i => !soloState.usedIndices.includes(i));
+  if (available.length === 0) { soloState.usedIndices = []; available = set.passages.map((_, i) => i); }
+  const idx = available[Math.floor(Math.random() * available.length)];
+  soloState.usedIndices.push(idx);
+  const passage = set.passages[idx];
+
+  soloState.startTime = null;
+  soloState.errors = 0;
+  soloState.totalTyped = 0;
+  soloState.finished = false;
+  soloState.errorIndices = [];
+  soloState.keystrokeLog = [];
+  clearInterval(soloState.wpmInterval);
+
+  const passageNum = soloState.currentPassageIdx + 1;
+  document.getElementById('solo-passage-badge').textContent = `Passage ${passageNum} of ${soloState.passagesPerSession}`;
+  document.getElementById('solo-scenario-text').textContent = passage.scenario;
+  document.getElementById('solo-fact-sidebar').textContent = passage.fact;
+
+  renderSoloPassageDisplay(passage.text, 0, []);
+
+  const input = document.getElementById('solo-typing-input');
+  input.value = '';
+  input.disabled = false;
+  input.placeholder = 'Begin typing the passage above...';
+
+  // Reset stats display
+  const wpmEl = document.getElementById('solo-stat-wpm');
+  wpmEl.textContent = '0';
+  wpmEl.style.color = 'var(--white)';
+  document.getElementById('solo-stat-acc').textContent = '100%';
+  document.getElementById('solo-stat-progress').textContent = '0%';
+
+  updateSoloWpmChart();
+
+  showScreen('solo');
+  setTimeout(() => input.focus(), 100);
+
+  input.oninput = (e) => onSoloTypingInput(e, passage.text);
+}
+
+function renderSoloPassageDisplay(passage, charsTyped, errors) {
+  const display = document.getElementById('solo-passage-display');
+  let html = '';
+  for (let i = 0; i < passage.length; i++) {
+    const ch = passage[i] === ' ' ? '&nbsp;' : passage[i];
+    if (i < charsTyped) {
+      html += errors.includes(i)
+        ? `<span class="char-error">${ch}</span>`
+        : `<span class="char-correct">${ch}</span>`;
+    } else if (i === charsTyped) {
+      html += `<span class="char-cursor"></span><span class="char-pending">${ch}</span>`;
+    } else {
+      html += `<span class="char-pending">${ch}</span>`;
+    }
+  }
+  if (charsTyped >= passage.length) html += `<span class="char-cursor"></span>`;
+  display.innerHTML = html;
+}
+
+function onSoloTypingInput(e, passage) {
+  const input = e.target;
+  const typed = input.value;
+
+  if (!soloState.startTime && typed.length > 0) {
+    soloState.startTime = Date.now();
+    // Keystroke log for rolling window: each entry is { t: timestamp, chars: charCount }
+    soloState.keystrokeLog = [{ t: soloState.startTime, chars: typed.length }];
+    soloState.wpmInterval = setInterval(() => updateSoloStats(passage), 150);
+  } else if (soloState.startTime && typed.length > 0) {
+    if (!soloState.keystrokeLog) soloState.keystrokeLog = [];
+    soloState.keystrokeLog.push({ t: Date.now(), chars: typed.length });
+    // Keep only last 10 seconds of keystrokes
+    const cutoff = Date.now() - 10000;
+    soloState.keystrokeLog = soloState.keystrokeLog.filter(k => k.t >= cutoff);
+  }
+
+  soloState.errorIndices = [];
+  for (let i = 0; i < typed.length; i++) {
+    if (typed[i] !== passage[i]) soloState.errorIndices.push(i);
+  }
+  soloState.errors = soloState.errorIndices.length;
+  soloState.totalTyped = Math.max(soloState.totalTyped, typed.length);
+
+  if (soloState.errorIndices.length > 0) {
+    input.classList.add('error');
+    setTimeout(() => input.classList.remove('error'), 280);
+  }
+
+  renderSoloPassageDisplay(passage, typed.length, soloState.errorIndices);
+  updateSoloStats(passage);
+
+  if (typed === passage && !soloState.finished) {
+    soloState.finished = true;
+    clearInterval(soloState.wpmInterval);
+    input.disabled = true;
+    updateSoloStats(passage);
+    finishSoloPassage(passage);
+  }
+}
+
+function getRollingWpm() {
+  const log = soloState.keystrokeLog;
+  if (!log || log.length < 2) return 0;
+  const now = Date.now();
+  const windowMs = 5000; // 5-second rolling window
+  const cutoff = now - windowMs;
+  const recent = log.filter(k => k.t >= cutoff);
+  if (recent.length < 2) {
+    // Fall back to full average when not enough recent data
+    const totalElapsed = (now - soloState.startTime) / 1000 / 60;
+    const totalChars = log[log.length - 1].chars;
+    return totalElapsed > 0 ? Math.round((totalChars / 5) / totalElapsed) : 0;
+  }
+  const oldest = recent[0];
+  const newest = recent[recent.length - 1];
+  const elapsedMin = (newest.t - oldest.t) / 1000 / 60;
+  const charsDelta = newest.chars - oldest.chars;
+  return elapsedMin > 0 ? Math.round((charsDelta / 5) / elapsedMin) : 0;
+}
+
+function updateSoloStats(passage) {
+  if (!soloState.startTime) return;
+  const typed = document.getElementById('solo-typing-input').value.length;
+  const wpm = getRollingWpm();
+  const acc = soloState.totalTyped > 0
+    ? Math.round(((soloState.totalTyped - soloState.errors) / soloState.totalTyped) * 100)
+    : 100;
+  const progress = Math.min(100, Math.round((typed / passage.length) * 100));
+
+  const wpmEl = document.getElementById('solo-stat-wpm');
+  wpmEl.textContent = wpm;
+
+  // Color the WPM based on speed
+  if (wpm >= 60) {
+    wpmEl.style.color = 'var(--green)';
+  } else if (wpm >= 35) {
+    wpmEl.style.color = 'var(--amber)';
+  } else if (wpm > 0) {
+    wpmEl.style.color = 'var(--red)';
+  } else {
+    wpmEl.style.color = 'var(--white)';
+  }
+
+  document.getElementById('solo-stat-acc').textContent = acc + '%';
+  document.getElementById('solo-stat-progress').textContent = progress + '%';
+
+  updateSoloWpmChart(wpm);
+}
+
+function finishSoloPassage(passage) {
+  const elapsed = (Date.now() - soloState.startTime) / 1000 / 60;
+  const words = passage.trim().split(/\s+/).length;
+  const wpm = elapsed > 0 ? Math.round(words / elapsed) : 0;
+  const acc = soloState.totalTyped > 0
+    ? Math.round(((soloState.totalTyped - soloState.errors) / soloState.totalTyped) * 100)
+    : 100;
+
+  soloState.results.push({ wpm, acc, words });
+
+  // Update sidebar stats
+  const allWpm = soloState.results.map(r => r.wpm);
+  const best = Math.max(...allWpm);
+  const avg = Math.round(allWpm.reduce((a, b) => a + b, 0) / allWpm.length);
+  const totalWords = soloState.results.reduce((a, r) => a + r.words, 0);
+
+  document.getElementById('solo-best-wpm').textContent = best;
+  document.getElementById('solo-avg-wpm').textContent = avg;
+  document.getElementById('solo-total-words').textContent = totalWords;
+  document.getElementById('solo-passages-done').textContent = soloState.results.length;
+
+  updateSoloWpmChart(wpm, true);
+
+  soloState.currentPassageIdx++;
+
+  if (soloState.currentPassageIdx >= soloState.passagesPerSession) {
+    setTimeout(() => showSoloComplete(), 900);
+  } else {
+    // Show a brief completion message on the input then advance
+    const input = document.getElementById('solo-typing-input');
+    input.placeholder = `Great! +${wpm} WPM · Loading next passage...`;
+    setTimeout(() => loadNextSoloPassage(), 1400);
+  }
+}
+
+function updateSoloWpmChart(currentWpm, completed) {
+  const bars = document.getElementById('solo-wpm-bars');
+  if (!bars) return;
+  const total = soloState.passagesPerSession;
+  const results = soloState.results;
+  const allWpm = [...results.map(r => r.wpm), currentWpm || 0].filter(Boolean);
+  const maxWpm = Math.max(...allWpm, 60);
+
+  let html = '';
+  for (let i = 0; i < total; i++) {
+    if (i < results.length) {
+      const h = Math.max(4, Math.round((results[i].wpm / maxWpm) * 60));
+      html += `<div class="wpm-bar" style="height:${h}px;" title="${results[i].wpm} WPM"></div>`;
+    } else if (i === results.length) {
+      const h = Math.max(4, Math.round(((currentWpm || 0) / maxWpm) * 60));
+      html += `<div class="wpm-bar current" style="height:${h}px;"></div>`;
+    } else {
+      html += `<div class="wpm-bar" style="height:3px;opacity:0.15;"></div>`;
+    }
+  }
+  bars.innerHTML = html;
+}
+
+function showSoloComplete() {
+  const results = soloState.results;
+  const allWpm = results.map(r => r.wpm);
+  const best = Math.max(...allWpm);
+  const avg = Math.round(allWpm.reduce((a, b) => a + b, 0) / allWpm.length);
+  const totalAcc = Math.round(results.reduce((a, r) => a + r.acc, 0) / results.length);
+
+  document.getElementById('solo-final-best').textContent = best;
+  document.getElementById('solo-final-avg').textContent = avg;
+  document.getElementById('solo-final-acc').textContent = totalAcc + '%';
+
+  const set = PASSAGE_SETS.find(s => s.id === soloState.setId) || PASSAGE_SETS[0];
+  const facts = set.passages.map(p => p.fact);
+  const fact = facts[Math.floor(Math.random() * facts.length)];
+  document.getElementById('solo-complete-fact').textContent = fact;
+
+  let title = 'Session Complete';
+  let sub = `${results.length} passages completed`;
+  if (best >= 70) { title = 'Elite Responder'; sub = 'Outstanding typing speed — first aid mastery unlocked!'; }
+  else if (best >= 50) { title = 'Field Ready'; sub = 'Solid speed and accuracy. You\'re prepared to respond!'; }
+  else { title = 'Session Complete'; sub = 'Keep practicing — every rep builds muscle memory and knowledge!'; }
+
+  document.getElementById('solo-complete-title').textContent = title;
+  document.getElementById('solo-complete-sub').textContent = sub;
+
+  document.getElementById('solo-complete-overlay').classList.add('show');
+}
+
+function restartSolo() {
+  document.getElementById('solo-complete-overlay').classList.remove('show');
+  soloState.usedIndices = [];
+  soloState.results = [];
+  soloState.currentPassageIdx = 0;
+  loadNextSoloPassage();
+}
+
+function exitSolo() {
+  document.getElementById('solo-complete-overlay').classList.remove('show');
+  clearInterval(soloState.wpmInterval);
+  const input = document.getElementById('solo-typing-input');
+  if (input) { input.oninput = null; input.value = ''; }
+  showScreen('landing');
+}
+
+// ═══════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════
+initSoloSetGrid();
+showScreen('landing');
+</script>
+</body>
+</html>
